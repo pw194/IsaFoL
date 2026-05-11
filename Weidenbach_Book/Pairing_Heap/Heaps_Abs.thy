@@ -12,13 +12,16 @@ text \<open>
   the abstract operations.
 \<close>
 locale hmstruct_with_prio =
-    fixes lt :: \<open>'v \<Rightarrow> 'v \<Rightarrow> bool\<close> and
-    le :: \<open>'v \<Rightarrow> 'v \<Rightarrow> bool\<close>
-  assumes hm_le: \<open>\<And>a b. le a b \<longleftrightarrow> a = b \<or> lt a b\<close> and
-    hm_trans: \<open>transp le\<close> and
-    hm_transt: \<open>transp lt\<close> and
-    hm_totalt: \<open>totalp lt\<close>
+  fixes    A :: \<open>'v set\<close> and
+          lt :: \<open>'v \<Rightarrow> 'v \<Rightarrow> bool\<close> and
+          le :: \<open>'v \<Rightarrow> 'v \<Rightarrow> bool\<close>
+  assumes hm_le: \<open>\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> le a b \<longleftrightarrow> a = b \<or> lt a b\<close> and
+    hm_trans:  \<open>transp_on A le\<close> and
+    hm_transt: \<open>transp_on A lt\<close> and
+    hm_totalt: \<open>totalp_on A lt\<close>
 begin
+
+(* TODO: Find out if I need to adjust this part! *)
 
     definition prio_peek_min where
       "prio_peek_min \<equiv>  (\<lambda>(\<A>, b, w). (\<lambda>v.
@@ -37,7 +40,7 @@ begin
 
     definition mop_prio_insert where
       "mop_prio_insert \<equiv>  (\<lambda>v \<omega> (\<A>, b, w). doN {
-        ASSERT (v \<notin># b \<and>  v\<in>#\<A>);
+        ASSERT (v \<notin># b \<and>  v\<in>#\<A> \<and> \<omega> \<in> A);
         RETURN (\<A>, add_mset v b, w(v := \<omega>))
      })"
 
@@ -91,8 +94,13 @@ begin
       RETURN (v, bw)
       })"
 
-sublocale pairing_heap
-  by unfold_locales (rule hm_le hm_trans hm_transt hm_totalt)+
+sublocale pairing_heap A lt le
+  apply unfold_locales
+  subgoal by (rule hm_le)
+  subgoal by (rule hm_trans)
+  subgoal by (rule hm_transt)
+  subgoal by (rule hm_totalt)
+  done
 
 end
 

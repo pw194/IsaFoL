@@ -38,8 +38,9 @@ fun get_min2  :: "('b, 'a) heap \<Rightarrow> 'b" where
 
 
 locale pairing_heap_assms =
-  fixes lt :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and
-    le :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
+  fixes  A :: \<open>'a set\<close> and
+        lt :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and
+        le :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close>
 begin
 
 fun link :: "('b, 'a) hp \<Rightarrow> ('b, 'a) hp \<Rightarrow> ('b, 'a) hp" where
@@ -121,26 +122,33 @@ fun (in -) set_hp :: \<open>('b, 'a) hp \<Rightarrow> 'a set\<close> where
 
 
 fun php :: "('b, 'a) hp \<Rightarrow> bool" where
-"php (Hp _ x hs) = (\<forall>h \<in> set hs. (\<forall>y \<in> set_hp h. le x y) \<and> php h)"
+"php (Hp _ x hs) = (x \<in> A \<and>(\<forall>h \<in> set hs. (\<forall>y \<in> set_hp h. le x y) \<and> php h))"
+
+lemma set_hp_inv: \<open>php h \<Longrightarrow> \<forall>x \<in> set_hp h. x \<in> A\<close>
+  by (induction h rule: php.induct) auto 
 
 definition invar :: "('b, 'a) heap \<Rightarrow> bool" where
 "invar ho = (case ho of None \<Rightarrow> True | Some h \<Rightarrow> php h)"
 end
 
-locale pairing_heap = pairing_heap_assms lt le
-  for lt :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and
-    le :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> +
-  assumes le: \<open>\<And>a b. le a b \<longleftrightarrow> a = b \<or> lt a b\<close> and
-    trans: \<open>transp le\<close> and
-    transt: \<open>transp lt\<close> and
-    totalt: \<open>totalp lt\<close>
+locale pairing_heap = pairing_heap_assms A lt le
+  for  A :: \<open>'a set\<close> and
+      lt :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and
+      le :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> +
+  assumes le: \<open>\<And>a b. a \<in> A \<Longrightarrow> b \<in> A \<Longrightarrow> le a b \<longleftrightarrow> a = b \<or> lt a b\<close> and
+    trans: \<open>transp_on  A le\<close>  and
+    transt: \<open>transp_on A lt\<close> and
+    totalt: \<open>totalp_on A lt\<close>
 begin
 
+(* TODO: Improve sledgehammer *)
 lemma php_link: "php h1 \<Longrightarrow> php h2 \<Longrightarrow> php (link h1 h2)"
   apply (induction h1 h2 rule: link.induct)
-  apply (auto 4 3 simp: le transt dest: transpD[OF transt] totalpD[OF totalt])
-  by (metis totalpD totalt transpD transt)
-
+  apply (auto 4 3 simp: le transt totalp_onD[OF totalt])
+  apply (meson le local.trans set_hp_inv transp_onD)
+  apply (metis totalp_onD totalt)
+  by (smt (verit) le local.trans set_hp_inv totalp_onD totalt transp_onD)
+  
 lemma invar_None[simp]: \<open>invar None\<close>
   by (auto simp: invar_def)
 
@@ -148,7 +156,7 @@ lemma invar_merge:
   "\<lbrakk> invar h1; invar h2 \<rbrakk> \<Longrightarrow> invar (merge h1 h2)"
 by (auto simp: php_link invar_def split: option.splits)
 
-lemma invar_insert: "invar h \<Longrightarrow> invar (insert n x h)"
+lemma invar_insert: "invar h \<Longrightarrow> x \<in> A \<Longrightarrow> invar (insert n x h)"
 by (auto simp: php_link invar_def split: option.splits)
 
 lemma invar_pass1: "\<forall>h \<in> set hs. php h \<Longrightarrow> \<forall>h \<in> set (pass\<^sub>1 hs). php h"
@@ -190,20 +198,15 @@ lemma invar_find_key: \<open>php h1 \<Longrightarrow> invar (find_key k h1)\<clo
 lemma (in -)remove_key_None_iff: \<open>remove_key k h1 = None \<longleftrightarrow> node h1 = k\<close>
   by (cases \<open>(k,h1)\<close> rule: remove_key.cases) auto
 
+(* TODO: Improve sledgehammer *)
 lemma php_decrease_key:
-  \<open>php h1  \<Longrightarrow> (case (find_key k h1) of None \<Rightarrow> True | Some a \<Rightarrow> le s (score a)) \<Longrightarrow> invar (decrease_key k s h1)\<close>
+  \<open>php h1  \<Longrightarrow> s \<in> A \<Longrightarrow> (case (find_key k h1) of None \<Rightarrow> True | Some a \<Rightarrow> le s (score a)) \<Longrightarrow> invar (decrease_key k s h1)\<close>
   using invar_find_key[of h1 k, simplified] remove_key_None_iff[of k h1] php_remove_key[of h1 k]
   apply (auto simp: decrease_key_def invar_def php_remove_key php_link
-    dest: transpD[OF transt, of _ \<open>score (the (find_key k h1))\<close>] totalpD[OF totalt]
+    dest: transp_onD[OF transt, of _ \<open>score (the (find_key k h1))\<close>] totalp_onD[OF totalt]
     split: option.splits hp.splits)
-  apply (meson le local.trans transpE)
-  apply (rule php_link)
-  apply (auto simp: decrease_key_def invar_def php_remove_key php_link
-    split: option.splits hp.splits
-    dest: transpD[OF transt, of _ \<open>score (the (find_key k h1))\<close>] totalpD[OF totalt])
-  apply (meson le local.trans transpE)
-  done
-
+  apply (meson local.trans set_hp_inv transp_onD)
+  by (metis local.trans php.simps php_link set_hp_inv transp_onD)
 
 subsubsection \<open>Functional Correctness\<close>
 
@@ -278,7 +281,7 @@ locale pairing_heap2 =
 begin
 
 sublocale pairing_heap where
-    lt =\<open>(<) :: 'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and le = \<open>(\<le>)\<close>
+    lt =\<open>(<) :: 'a \<Rightarrow> 'a \<Rightarrow> bool\<close> and le = \<open>(\<le>)\<close> and A = \<open>UNIV\<close>
   by unfold_locales
      (auto simp: antisymp_def totalp_on_def)
 
@@ -301,7 +304,7 @@ next
 next
   case 6 thus ?case by (simp add: invar_def)
 next
-  case 7 thus ?case by(rule invar_insert)
+  case 7 thus ?case by (simp add: invar_insert)
 next
   case 8 thus ?case by (simp add: invar_del_min)
 next

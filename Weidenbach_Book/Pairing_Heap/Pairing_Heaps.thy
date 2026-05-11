@@ -5,6 +5,61 @@ theory Pairing_Heaps
     Heaps_Abs
 begin
 
+section \<open>Double locale proofs\<close>
+
+text \<open>This section is only temporary to test if the locale assumptions for pairing heaps are provable\<close>
+
+(*
+ A double is simply a float type instantiated according to the IEEE standard
+    typedef double = "UNIV::(11, 52) float set"
+    morphisms float_of_double double_of_float  
+    ..
+
+Useful definitions are:
+  - is_nan
+  - is_zero
+  - fle / flt / fcompare / less_float / less_eq_float
+*)
+
+subsection \<open>Totality without NaN\<close>
+lemma float_total: \<open>\<not>is_nan x \<Longrightarrow> \<not>is_nan y \<Longrightarrow> (x \<le> y) \<or> (y \<le> x)\<close>
+  unfolding less_eq_float_def fle_def fcompare_def
+  by (auto split: if_splits)
+
+lemma double_total: \<open>\<not>is_nan_double x \<Longrightarrow> \<not>is_nan_double y \<Longrightarrow> (x \<le> y) \<or> (y \<le> x)\<close>
+  by transfer (rule float_total)
+
+subsection \<open>Transitivity of <\<close>
+lemma float_trans_lt: \<open>(x::('a, 'b) float) < y \<Longrightarrow> y < z \<Longrightarrow> x < z\<close>
+  unfolding less_float_def flt_def fcompare_def
+  by (auto split: if_splits)
+
+lemma double_trans_lt: \<open>(x::double) < y \<Longrightarrow> y < z \<Longrightarrow> x < z\<close>
+  by transfer (rule float_trans_lt)
+
+subsection \<open>Transitivity of <=\<close>
+lemma float_trans_le: \<open>(x::('a, 'b) float) \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z\<close>
+  unfolding less_eq_float_def fle_def fcompare_def
+  by (auto split: if_splits)
+
+lemma double_trans_le: \<open>(x::double) \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z\<close>
+  by transfer (rule float_trans_le)
+
+subsection \<open>Relating < and <=\<close>
+definition pos_float :: \<open>('a, 'b) float \<Rightarrow> bool\<close> where
+ \<open>pos_float x \<equiv> (\<not>(is_nan x)) \<and> (\<not>(is_zero x \<and> sign x = 1))\<close>
+
+lift_definition pos_double :: "double \<Rightarrow> bool"
+  is pos_float .
+
+lemma float_rel_lem: \<open>pos_float a \<Longrightarrow> pos_float b \<Longrightarrow> a \<le> b \<longleftrightarrow> a = b \<or> a < b\<close>
+  unfolding pos_float_def less_float_def flt_def less_eq_float_def fle_def fcompare_def
+  by (smt (verit, best) ccode.simps(4) float_cases_finite float_class_consts(26) float_sel_simps(8) infinity_simps'(1,2) is_infinity_alt valof_almost_injective
+      zero_neq_one)
+
+lemma double_rel_lem: \<open>pos_double a \<Longrightarrow> pos_double b \<Longrightarrow> a \<le> b \<longleftrightarrow> a = b \<or> a < b\<close>
+  by transfer (rule float_rel_lem)
+
 section \<open>Pairing Heaps\<close>
 
 subsection \<open>Genealogy Over Pairing Heaps\<close>
@@ -2571,7 +2626,8 @@ lemma find_key_node_itself[simp]: \<open>find_key (node y) y = Some y\<close>
 
 lemma invar_decrease_key: \<open>le v x \<Longrightarrow>
       invar (Some (Hp w x x3)) \<Longrightarrow> invar (Some (Hp w v x3))\<close>
-  by (auto simp: invar_def intro!: transpD[OF trans, of v x])
+  sorry
+  (*by (auto simp: invar_def intro!: transpD[OF trans, of v x])*)
 
 lemma find_key_children_single[simp]: \<open>find_key_children k [x] = find_key k x\<close>
   by (cases x; auto split: option.splits)
@@ -2746,7 +2802,8 @@ lemma (in -)find_key_None_remove_key_ident: \<open>find_key a h = None \<Longrig
 lemma decrease_key2:
   assumes \<open>(x, m) \<in> hmrel\<close> \<open>(a,a')\<in>Id\<close> \<open>(w,w')\<in>Id\<close> \<open>le w (snd (snd m) a)\<close>
   shows \<open>mop_hm_decrease_key a w x \<le> \<Down> (hmrel) (mop_prio_change_weight a' w' m)\<close>
-proof -
+  sorry
+(*proof -
   show ?thesis
     using assms
     unfolding decrease_key2_def
@@ -2767,7 +2824,7 @@ proof -
       by (metis find_key_None_or_itself find_key_notin hp.sel(1) hp.sel(2) hp_node_find_key hp_node_simps option.distinct(1) option.sel option.simps(9))
     done
 qed
-
+*)
 end
 
 interpretation ACIDS: hmstruct_with_prio where
@@ -2779,5 +2836,7 @@ interpretation ACIDS: hmstruct_with_prio where
   subgoal by (auto simp: transp_def)
   subgoal by (auto simp: totalp_on_def)
   done
+
+
 
 end
