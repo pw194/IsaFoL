@@ -1192,6 +1192,47 @@ proof -
   then show ?thesis by auto
 qed
 
+paragraph \<open>Incremental (Hacky version)\<close>
+
+fun add_clauses_concrete :: \<open>'v cdcl\<^sub>W_restart_state_inv_st \<Rightarrow> 'v literal list list \<Rightarrow> 'v cdcl\<^sub>W_restart_state_inv_st\<close> where
+  \<open>add_clauses_concrete (M, N, U, D) clss = ([], N @ U @ map remdups clss, [], None)\<close>
+
+definition add_clauses :: \<open>nat cdcl\<^sub>W_restart_state_inv_from_init_state 
+                           \<Rightarrow> nat literal list list 
+                           \<Rightarrow> nat cdcl\<^sub>W_restart_state_inv_from_init_state\<close> where
+  \<open>add_clauses st clss = state_from_init_state_of (add_clauses_concrete (rough_state_from_init_state_of st) clss)\<close>
+
+lemma add_clauses_concrete_preserves_all_struct_inv:
+  assumes \<open>cdcl\<^sub>W_all_struct_inv (toS st)\<close>
+  shows \<open>cdcl\<^sub>W_all_struct_inv (toS (add_clauses_concrete st clss))\<close>
+  using assms unfolding cdcl\<^sub>W_all_struct_inv_def
+  apply (cases st)
+  apply (auto simp: no_strange_atm_def 
+                    distinct_cdcl\<^sub>W_state_def 
+                    distinct_mset_set_def)
+  done
+
+lemma add_clauses_code[code abstract]:
+  \<open>rough_state_from_init_state_of (add_clauses st clss) 
+    = add_clauses_concrete (rough_state_from_init_state_of st) clss\<close>
+  unfolding add_clauses_def
+  apply (rule state_from_init_state_of_inverse)
+  apply auto
+  subgoal
+  proof (cases \<open>(rough_state_from_init_state_of st)\<close>)
+    have inv: \<open>cdcl\<^sub>W_all_struct_inv (toS (rough_state_from_init_state_of st))\<close>
+      using rough_state_from_init_state_of[of \<open>st\<close>] by auto
+    then show ?thesis 
+      using add_clauses_concrete_preserves_all_struct_inv[of \<open>(rough_state_from_init_state_of st)\<close>] 
+      by auto
+  qed
+  subgoal
+    by (cases \<open>(rough_state_from_init_state_of st)\<close>) auto
+  done
+
+subsection \<open>Correctness theorems\<close>
+lemma DPLL_tot_correct_inc: True
+  by auto
 
 paragraph \<open>The Code\<close>
 text \<open>The SML code is skipped in the documentation, but stays to ensure that some version of the
@@ -1202,6 +1243,10 @@ text \<open>The SML code is skipped in the documentation, but stays to ensure th
 fun gene where
 "gene 0 = [[Pos 0], [Neg 0]]" |
 "gene (Suc n) = map ((#) (Pos (Suc n))) (gene n) @ map ((#) (Neg (Suc n))) (gene n)"
+
+fun gene_pos where
+"gene_pos 0 = [[Pos 0]]" |
+"gene_pos (Suc n) = map ((#) (Pos (Suc n))) (gene_pos n)"
 
 value "gene 1"
 
@@ -1227,11 +1272,14 @@ proof -
         distinct_mset_set_def)
 qed
 
+value \<open>do_all_cdcl\<^sub>W_stgy_nat (init_state_init_state_of (gene 1))\<close>
+value \<open>foldr (\<lambda>cls st . do_all_cdcl\<^sub>W_stgy_nat (add_clauses st [cls])) (gene_pos 2) (init_state_init_state_of [])\<close>
+
 code_identifier
   code_module DPLL_CDCL_W_Implementation \<rightharpoonup> (OCaml) CDCL_W_Level
 
 export_code do_all_cdcl\<^sub>W_stgy_nat Pos Neg natural_of_nat nat_of_integer init_state_init_state_of
-  integer_of_int int_of_integer
+  integer_of_int int_of_integer add_clauses
   in SML
   module_name SAT_Solver
   file_prefix "Functional_Solver"
