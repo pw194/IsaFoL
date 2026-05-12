@@ -34,6 +34,7 @@ begin
     definition mop_prio_change_weight where
       "mop_prio_change_weight \<equiv>  (\<lambda>v \<omega> (\<A>, b, w). doN {
         ASSERT (v \<in># \<A>);
+        ASSERT (\<omega> \<in> A);
         ASSERT (v \<in># b \<longrightarrow> le \<omega> (w v));
         RETURN (\<A>, b, w(v := \<omega>))
      })"
@@ -49,6 +50,7 @@ begin
       ASSERT (v \<in># \<A>);
       RETURN (v \<in>#b)
       })\<close>
+
     definition mop_prio_insert_maybe where
       "mop_prio_insert_maybe \<equiv>  (\<lambda>v \<omega> (bw). doN {
         b \<leftarrow> mop_prio_is_in v bw;

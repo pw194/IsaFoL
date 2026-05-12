@@ -1230,9 +1230,60 @@ lemma add_clauses_code[code abstract]:
     by (cases \<open>(rough_state_from_init_state_of st)\<close>) auto
   done
 
+
 subsection \<open>Correctness theorems\<close>
-lemma DPLL_tot_correct_inc: True
-  by auto
+lemma list_lem: \<open>(\<forall>ys \<in> set (xs::nat literal list list). distinct ys) \<Longrightarrow> xs = map remdups xs\<close>
+  by (simp add: map_idI)
+thm DPLL_tot_correct
+
+lemma satisfiability_drop: \<open>satisfiable (A \<union> B \<union> C) \<Longrightarrow> satisfiable (A \<union> C)\<close>
+  by (metis satisfiable_decreasing sup_assoc sup_commute)
+  
+
+lemma unsatisfiability_drop: 
+  \<open>unsatisfiable (A \<union> B \<union> C) \<Longrightarrow> A \<Turnstile>ps B \<Longrightarrow> unsatisfiable (A \<union> C)\<close>
+  unfolding satisfiable_def true_clss_clss_def apply simp
+  by (metis total_over_m_consistent_extension total_over_m_union true_clss_union_increase) 
+
+theorem DPLL_tot_correct_inc:
+  assumes
+    A1: \<open>rough_state_from_init_state_of S = (M0, N0, U0, D0)\<close> and
+    A2: \<open>rough_state_from_init_state_of (do_all_cdcl\<^sub>W_stgy (add_clauses S clss)) = T\<close> and
+    A3: \<open>(M1, N1, U1, D1) = toS T\<close>
+  shows \<open>(D1 \<noteq> Some {#} \<and> satisfiable (set (map mset N0) \<union> set (map mset clss))) 
+            \<or> (D1 = Some {#} \<and> (unsatisfiable (set (map mset N0) \<union> set (map mset clss))))\<close>
+proof -
+  have \<open>cdcl\<^sub>W_all_struct_inv (toS (rough_state_from_init_state_of S))\<close>
+    using rough_state_from_init_state_of rough_state_of by auto
+  then have H1: \<open>(\<forall>ys \<in> set N0. distinct ys) \<and> (\<forall>ys \<in> set U0. distinct ys) \<and> (\<forall>ys \<in> set (map remdups clss). distinct ys)\<close>
+    using A1 by (auto simp: cdcl\<^sub>W_all_struct_inv_def distinct_cdcl\<^sub>W_state_def distinct_mset_set_def)
+  obtain M' N' U' D' where 
+    H2: \<open>(M', N', U', D') = rough_state_from_init_state_of (add_clauses S clss)\<close> and
+    H3: \<open>M' = [] \<and> N' = N0 @ U0 @ map remdups clss \<and> U' = [] \<and> D' = None\<close>                   
+    using A1 add_clauses_code by (cases \<open>rough_state_from_init_state_of (add_clauses S clss)\<close>) auto
+  have H4: \<open>(set (map mset N')) = (set (map mset N0)) \<union> (set (map mset U0)) \<union> (set (map mset (map remdups clss)))\<close> 
+    using H3 by auto
+  have sat_preserve: \<open>satisfiable (set (map mset N')) \<Longrightarrow> satisfiable (set (map mset N0) \<union> set (map mset clss))\<close>
+    by (metis (no_types, lifting) H1 H4 image_Un list.map_comp list.set_map list_lem satisfiability_drop satisfiable_mset_remdups(1))
+  (*^ First main result ^*)
+  have reach_restart: \<open>cdcl\<^sub>W_restart\<^sup>*\<^sup>* (S0_cdcl\<^sub>W_restart (raw_init_clss (toS (rough_state_from_init_state_of S)))) (toS (rough_state_from_init_state_of S))\<close>
+    using rough_state_from_init_state_of[of S] rtranclp_cdcl\<^sub>W_stgy_rtranclp_cdcl\<^sub>W_restart by blast
+  have learned_is_entailed: \<open>cdcl\<^sub>W_learned_clauses_entailed_by_init (toS (rough_state_from_init_state_of S))\<close>
+    using rtranclp_cdcl\<^sub>W_learned_clauses_entailed[OF reach_restart] by auto
+  then have \<open>set (map mset N0) \<Turnstile>ps set (map mset U0)\<close>
+    using A1 by (auto simp: cdcl\<^sub>W_learned_clauses_entailed_by_init_def)
+  then have unsat_preserve: \<open>unsatisfiable (set (map mset N')) \<Longrightarrow> unsatisfiable (set (map mset N0) \<union> set (map mset clss))\<close>
+    using unsatisfiability_drop[of \<open>set (map mset N0)\<close> \<open>set (map mset U0)\<close> \<open>set (map mset (map remdups clss))\<close>]
+      by (metis (no_types, lifting) H1 H4 image_Un list.map_comp list.set_map list_lem satisfiable_mset_remdups(1))
+  (*^ Second main result ^*)
+  have state_equal: \<open>rough_state_from_init_state_of (do_all_cdcl\<^sub>W_stgy (state_from_init_state_of ([], map remdups N', [], None))) = T\<close>
+     by (metis A2 H1 H2 H3 Un_iff add_clauses_code add_clauses_def map_idI remdups_id_iff_distinct set_append) 
+  have final: \<open>(D1 \<noteq> Some {#} \<and> satisfiable (set (map mset N')))
+                \<or> (D1 = Some {#} \<and> (unsatisfiable (set (map mset N'))))\<close>
+    using DPLL_tot_correct[OF state_equal A3] by auto
+  then show ?thesis 
+    using sat_preserve unsat_preserve by auto
+qed
 
 paragraph \<open>The Code\<close>
 text \<open>The SML code is skipped in the documentation, but stays to ensure that some version of the
@@ -1271,7 +1322,7 @@ proof -
     by (auto simp: cdcl\<^sub>W_all_struct_inv_def distinct_cdcl\<^sub>W_state_def
         distinct_mset_set_def)
 qed
-
+thm DPLL_tot_correct
 value \<open>do_all_cdcl\<^sub>W_stgy_nat (init_state_init_state_of (gene 1))\<close>
 value \<open>foldr (\<lambda>cls st . do_all_cdcl\<^sub>W_stgy_nat (add_clauses st [cls])) (gene_pos 2) (init_state_init_state_of [])\<close>
 

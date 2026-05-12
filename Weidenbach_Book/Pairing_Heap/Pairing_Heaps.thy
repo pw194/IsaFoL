@@ -47,7 +47,7 @@ lemma double_trans_le: \<open>(x::double) \<le> y \<Longrightarrow> y \<le> z \<
 
 subsection \<open>Relating < and <=\<close>
 definition pos_float :: \<open>('a, 'b) float \<Rightarrow> bool\<close> where
- \<open>pos_float x \<equiv> (\<not>(is_nan x)) \<and> (\<not>(is_zero x \<and> sign x = 1))\<close>
+ \<open>pos_float x \<equiv> (\<not>(is_nan x)) \<and> (\<not>(is_zero x \<and> sign x = 1)) \<and> (x \<ge> 0)\<close>
 
 lift_definition pos_double :: "double \<Rightarrow> bool"
   is pos_float .
@@ -2624,10 +2624,10 @@ lemma mop_prio_insert:
 lemma find_key_node_itself[simp]: \<open>find_key (node y) y = Some y\<close>
   by (cases y) auto
 
-lemma invar_decrease_key: \<open>le v x \<Longrightarrow>
+lemma invar_decrease_key: \<open>le v x \<Longrightarrow> v \<in> A \<Longrightarrow>
       invar (Some (Hp w x x3)) \<Longrightarrow> invar (Some (Hp w v x3))\<close>
-  sorry
-  (*by (auto simp: invar_def intro!: transpD[OF trans, of v x])*)
+  by (metis invar_Some local.trans php.simps set_hp_inv transp_on_def)
+  
 
 lemma find_key_children_single[simp]: \<open>find_key_children k [x] = find_key k x\<close>
   by (cases x; auto split: option.splits)
@@ -2802,8 +2802,7 @@ lemma (in -)find_key_None_remove_key_ident: \<open>find_key a h = None \<Longrig
 lemma decrease_key2:
   assumes \<open>(x, m) \<in> hmrel\<close> \<open>(a,a')\<in>Id\<close> \<open>(w,w')\<in>Id\<close> \<open>le w (snd (snd m) a)\<close>
   shows \<open>mop_hm_decrease_key a w x \<le> \<Down> (hmrel) (mop_prio_change_weight a' w' m)\<close>
-  sorry
-(*proof -
+proof -
   show ?thesis
     using assms
     unfolding decrease_key2_def
@@ -2824,7 +2823,7 @@ lemma decrease_key2:
       by (metis find_key_None_or_itself find_key_notin hp.sel(1) hp.sel(2) hp_node_find_key hp_node_simps option.distinct(1) option.sel option.simps(9))
     done
 qed
-*)
+
 end
 
 interpretation ACIDS: hmstruct_with_prio where
@@ -2837,6 +2836,24 @@ interpretation ACIDS: hmstruct_with_prio where
   subgoal by (auto simp: totalp_on_def)
   done
 
-
+interpretation VSIDS: hmstruct_with_prio where
+  le = \<open>(\<ge>) :: double \<Rightarrow> double \<Rightarrow> bool\<close> and
+  lt = \<open>(>)\<close> and
+  A = \<open>{x. \<not>is_nan_double x \<and> pos_double x}\<close>
+  apply unfold_locales
+  subgoal using double_rel_lem by auto
+  subgoal 
+    unfolding transp_on_def 
+    apply auto
+    using double_trans_le by auto
+  subgoal 
+    unfolding transp_on_def 
+    apply auto
+    using double_trans_lt by auto
+  subgoal
+    unfolding totalp_on_def
+    apply auto
+    using double_total double_rel_lem by auto 
+  done
 
 end
