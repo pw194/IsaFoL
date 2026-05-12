@@ -47,7 +47,7 @@ lemma double_trans_le: \<open>(x::double) \<le> y \<Longrightarrow> y \<le> z \<
 
 subsection \<open>Relating < and <=\<close>
 definition pos_float :: \<open>('a, 'b) float \<Rightarrow> bool\<close> where
- \<open>pos_float x \<equiv> (\<not>(is_nan x)) \<and> (\<not>(is_zero x \<and> sign x = 1)) \<and> (x \<ge> 0)\<close>
+ \<open>pos_float x \<equiv> (\<not>(is_nan x)) \<and> (sign x = 0)\<close>
 
 lift_definition pos_double :: "double \<Rightarrow> bool"
   is pos_float .
@@ -2828,7 +2828,8 @@ end
 
 interpretation ACIDS: hmstruct_with_prio where
   le = \<open>(\<ge>) :: nat \<Rightarrow> nat \<Rightarrow> bool\<close> and
-  lt = \<open>(>)\<close>
+  lt = \<open>(>)\<close> and
+   A = UNIV
   apply unfold_locales
   subgoal by auto
   subgoal by auto
