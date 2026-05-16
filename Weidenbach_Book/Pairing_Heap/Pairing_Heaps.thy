@@ -2919,4 +2919,15 @@ instance double\<^sub>p :: linorder
   subgoal using double\<^sub>p_total_le by auto
   done
 
+instantiation double\<^sub>p :: zero
+begin
+
+lift_definition zero_double\<^sub>p :: double\<^sub>p is \<open>(0 :: double)\<close>
+ unfolding is_positive_double_def is_positive_float_def
+   by (simp add: zero_double.rep_eq)
+
+instance ..
+
+end
+
 end
