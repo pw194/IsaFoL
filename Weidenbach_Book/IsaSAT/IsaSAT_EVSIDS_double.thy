@@ -89,6 +89,7 @@ lemma double\<^sub>p_le_iff_le_or_eq: \<open>(x::double\<^sub>p) \<le> y \<longl
   by transfer (rule double_le_iff_le_or_eq)
 
 text \<open>Now we can finalize the interpretation with the new type\<close>
+(*
 interpretation VSIDS: hmstruct_with_prio where
   le = \<open>(\<ge>) :: double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> and
   lt = \<open>(>)\<close>
@@ -98,7 +99,7 @@ interpretation VSIDS: hmstruct_with_prio where
   subgoal using transp_def double\<^sub>p_trans_lt by auto
   subgoal using double\<^sub>p_le_iff_le_or_eq double\<^sub>p_total_le by (auto simp: totalp_on_def)
   done
-
+*)
 subsection \<open>Linorder instantiation\<close>
 text \<open>Test if we can actually show that \<^verbatim>\<open>double\<^sub>p\<close> is a linorder\<close>
 
@@ -164,7 +165,7 @@ In order to change to EVSIDS we need to acoomodate two different arithmetic oper
   1. (+) for bumping scores
   2. (*) for growing the increment
   
-We need to define these for the \<^verbatim>\<open>double\<^sub>p\<close> type and then
+We need to define these for the \<^verbatim>\<open>double\<^sub>p\<close> type and then prove their closure property
 \<close>
 
 subsubsection \<open>Addition (+)\<close>
@@ -261,5 +262,24 @@ text \<open>Now we can lift the definition to double, and finally to \<^verbatim
 lift_definition dmul :: \<open>double \<Rightarrow> double \<Rightarrow> double\<close> is \<open>fmul\<^sub>p\<close> .
 lift_definition dmul\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> double\<^sub>p\<close> is \<open>dmul\<close>
   by transfer (rule float\<^sub>p_times_closure)
+
+subsection \<open>Helpers\<close>
+text \<open>For some goals we need monotoicity of addition\<close>
+lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> x \<le> x + y\<close>
+  unfolding is_positive_float_def plus_float_def fadd_def
+  apply (cases \<open>is_infinity x\<close>; cases \<open>is_infinity y\<close>)
+     apply (simp_all only: simp_thms is_positive_float_def if_True if_False roundmode.distinct if_cancel)
+  subgoal by (simp add: float\<^sub>p_le_iff_le_or_eq is_positive_float_def) 
+  subgoal by (simp add: float\<^sub>p_le_iff_le_or_eq is_positive_float_def)
+  subgoal by (metis float_le_inf_simps(3) float_neg_sign infinity_simps'(1) is_infinity_alt) 
+  subgoal by (smt (verit, ccfv_threshold) bound_at_worst_lemma defloat_float_zerosign_round_finite float_cases_finite float_class_consts(8) float_le float_le_inf_simps(3)
+        infinity_float_def round.simps(1) signzero_zero threshold_pos val_zero valof_nonneg zerosign_def) 
+  done
+
+lemma double_plus_mono: \<open>is_positive_double x \<Longrightarrow> is_positive_double y \<Longrightarrow> x \<le> x + y\<close>
+  by transfer (rule float\<^sub>p_plus_mono)
+
+lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
+  by transfer (rule double_plus_mono)
 
 end
