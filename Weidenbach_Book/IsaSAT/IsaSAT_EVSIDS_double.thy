@@ -9,7 +9,7 @@ definition is_positive_float :: \<open>('e,'f) float \<Rightarrow> bool\<close> 
 
 lift_definition is_positive_double :: \<open>double \<Rightarrow> bool\<close> is is_positive_float .
 
-text \<open>We define the types of positive doubles, excluding NaN\<close>
+text \<open>We define the type of positive doubles, excluding NaN\<close>
 typedef double\<^sub>p = \<open>{x. is_positive_double x}\<close> 
   morphisms to_double from_double
 proof
@@ -281,5 +281,23 @@ lemma double_plus_mono: \<open>is_positive_double x \<Longrightarrow> is_positiv
 
 lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
   by transfer (rule double_plus_mono)
+
+subsection \<open>Constants\<close>
+
+text \<open>EVSIDS needs a limit that once exceeded, triggers a re-score of the scores and inc\<close>
+text \<open>The below definition is inspired by CADICAL and corresponds to 
+                 2^500 \<approx> 3.273390607896142 \<cdot> 10^150\<close>
+
+definition vsids_float_limit :: \<open>(11, 52) float\<close> where
+  \<open>vsids_float_limit = Abs_float (0, of_nat 1523, 0)\<close>
+
+lemma limit_is_pos: "is_positive_float vsids_float_limit"
+  unfolding is_positive_float_def vsids_float_limit_def is_nan_def
+  by (auto simp add: sign.rep_eq exponent.rep_eq fraction.rep_eq Abs_float_inverse)
+
+lift_definition vsids_double_limit :: double is vsids_float_limit .
+
+lift_definition vsids_limit :: \<open>double\<^sub>p\<close> is vsids_double_limit
+  by transfer (rule limit_is_pos)
 
 end

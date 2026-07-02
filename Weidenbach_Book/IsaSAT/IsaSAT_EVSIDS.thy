@@ -35,7 +35,7 @@ definition vsids_tl :: \<open>'a \<Rightarrow> ('a, 'v::ord) vsids \<Rightarrow>
     RETURN (vc, inc)
   })\<close>
 
-lemma acids_tl:
+lemma vsids_tl:
   \<open>vc \<in> vsids \<A> M \<Longrightarrow> L \<in># \<A> \<Longrightarrow> M \<noteq> [] \<Longrightarrow> L = atm_of (lit_of (hd M)) \<Longrightarrow> vsids_tl L vc \<le> RES (vsids \<A> (tl M))\<close>
   unfolding vsids_tl_def VSIDS.mop_prio_insert_unchanged_def
     VSIDS.mop_prio_insert_raw_unchanged_def nres_monad3
@@ -203,7 +203,7 @@ lemma vsids_push_literal:
     dest: subset_add_mset_notin_subset)
   done
 
-definition vsids_flush_int :: \<open>nat multiset \<Rightarrow> (nat,double\<^sub>p) ann_lits \<Rightarrow> (nat, double\<^sub>p) vsids \<Rightarrow> _ \<Rightarrow> ((nat, double\<^sub>p) vsids \<times> _)nres\<close> where
+definition vsids_flush_int :: \<open>nat multiset \<Rightarrow> (nat,nat) ann_lits \<Rightarrow> (nat, double\<^sub>p) vsids \<Rightarrow> _ \<Rightarrow> ((nat, double\<^sub>p) vsids \<times> _)nres\<close> where
 \<open>vsids_flush_int \<A>\<^sub>i\<^sub>n = (\<lambda>M vm (to_remove, h). do {
     ASSERT(length to_remove \<le> unat32_max);
     (_, vm, h) \<leftarrow> WHILE\<^sub>T\<^bsup>\<lambda>(i, vm', h). i \<le> length to_remove \<and>
@@ -221,7 +221,7 @@ definition vsids_flush_int :: \<open>nat multiset \<Rightarrow> (nat,double\<^su
 
 
 definition vsids_flush
-   :: \<open>nat multiset \<Rightarrow> (nat,double\<^sub>p) ann_lits \<Rightarrow> (nat, double\<^sub>p) vsids \<Rightarrow> nat set \<Rightarrow> ((nat, double\<^sub>p) vsids \<times> nat set) nres\<close>
+   :: \<open>nat multiset \<Rightarrow> (nat,nat) ann_lits \<Rightarrow> (nat, double\<^sub>p) vsids \<Rightarrow> nat set \<Rightarrow> ((nat, double\<^sub>p) vsids \<times> nat set) nres\<close>
 where
   \<open>vsids_flush \<A>\<^sub>i\<^sub>n = (\<lambda>M vm remove_int. SPEC (\<lambda>x. (fst x) \<in> vsids \<A>\<^sub>i\<^sub>n M \<and> snd x = {}))\<close>
 
