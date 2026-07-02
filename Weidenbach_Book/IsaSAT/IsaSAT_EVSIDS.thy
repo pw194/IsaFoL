@@ -6,7 +6,7 @@ theory IsaSAT_EVSIDS
 begin
 
 section \<open>VSIDS\<close>
-
+(*TODO: Missing invariant? \<open>Max ({0} \<union> w ` set_mset b) \<le> vsids_limit\<close> *)
 (*We can try to re-use m as the increment inc*)
 type_synonym ('a, 'v) vsids = \<open>('a multiset \<times> 'a multiset \<times> ('a \<Rightarrow> 'v)) \<times> 'v\<close>
 definition vsids :: \<open>'a multiset \<Rightarrow> ('a, 'ann) ann_lits \<Rightarrow> ('a, 'v::{zero,linorder}) vsids set\<close> where

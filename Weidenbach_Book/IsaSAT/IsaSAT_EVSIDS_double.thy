@@ -284,9 +284,23 @@ lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
 
 subsection \<open>Constants\<close>
 
+text \<open>EVSIDS needs a so-called dampening constant in order to increase our increment
+      Here I chose \<approx> 1.052631579\<close>
+definition vsids_float_damping :: \<open>(11, 52) float\<close> where
+ \<open>vsids_float_damping = Abs_float (0, 0, 0x0D79435E8AB61)\<close>
+
+lemma damping_is_pos: \<open>is_positive_float vsids_float_damping\<close>
+  unfolding is_positive_float_def vsids_float_damping_def is_nan_def
+  by (auto simp add: sign.rep_eq exponent.rep_eq fraction.rep_eq Abs_float_inverse)
+
+lift_definition vsids_double_damping :: double is vsids_float_damping .
+
+lift_definition vsids_damping :: \<open>double\<^sub>p\<close> is vsids_double_damping
+  by transfer (rule damping_is_pos)
+
 text \<open>EVSIDS needs a limit that once exceeded, triggers a re-score of the scores and inc\<close>
 text \<open>The below definition is inspired by CADICAL and corresponds to 
-                 2^500 \<approx> 3.273390607896142 \<cdot> 10^150\<close>
+      2^500 \<approx> 3.273390607896142 \<cdot> 10^150\<close>
 
 definition vsids_float_limit :: \<open>(11, 52) float\<close> where
   \<open>vsids_float_limit = Abs_float (0, of_nat 1523, 0)\<close>
@@ -299,5 +313,22 @@ lift_definition vsids_double_limit :: double is vsids_float_limit .
 
 lift_definition vsids_limit :: \<open>double\<^sub>p\<close> is vsids_double_limit
   by transfer (rule limit_is_pos)
+
+text \<open>For rescoring we also need a small constant that we multiply with.
+      For now I go with \<approx> 1^-100\<close>
+definition vsids_float_rescore_factor :: "(11,52) float" where
+  "vsids_float_rescore_factor = Abs_float (0, of_nat 690, 0xBFF2EE48E0530)"
+
+lemma emax_double: "emax TYPE((11,52) float) = 2047"
+  unfolding emax_def by eval
+
+lemma rescore_is_pos: \<open>is_positive_float vsids_float_rescore_factor\<close>
+  unfolding is_positive_float_def vsids_float_rescore_factor_def is_nan_def
+  by (auto simp add: sign.rep_eq exponent.rep_eq fraction.rep_eq Abs_float_inverse emax_double)
+
+lift_definition vsids_double_rescore_factor :: double is vsids_float_rescore_factor .
+
+lift_definition vsids_rescore_factor :: \<open>double\<^sub>p\<close> is vsids_double_rescore_factor
+  by transfer (rule rescore_is_pos)
 
 end
