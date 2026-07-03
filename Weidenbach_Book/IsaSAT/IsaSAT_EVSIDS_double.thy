@@ -75,6 +75,17 @@ lemma double_total_le: \<open>is_positive_double x \<Longrightarrow> is_positive
 lemma double\<^sub>p_total_le: \<open>(x::double\<^sub>p) \<le> y \<or> y \<le> x\<close>
   by transfer (rule double_total_le)
 
+lemma float\<^sub>p_total_lt: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> ((x \<noteq> y) \<longrightarrow> (x < y) \<or> (y < x))\<close>
+  unfolding is_positive_float_def less_float_def flt_def fcompare_def
+  apply (simp split: if_splits)
+  by (metis float_cases_finite infinity_simps'(2) is_infinity_alt sign_pos_iff_valof valof_almost_injective zero_neq_one) 
+
+lemma double_total_lt: \<open>is_positive_double x \<Longrightarrow> is_positive_double y \<Longrightarrow> ((x \<noteq> y) \<longrightarrow> (x < y) \<or> (y < x))\<close>
+  by transfer (rule float\<^sub>p_total_lt)
+
+lemma double\<^sub>p_total_lt: \<open>(x \<noteq> y) \<longrightarrow> ((x::double\<^sub>p) < y \<or> (y < x))\<close>
+  by transfer (rule double_total_lt)
+
 text \<open>Iff\<close>
 
 lemma float\<^sub>p_le_iff_le_or_eq: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> x \<le> y \<longleftrightarrow> x = y \<or> x < y\<close>
@@ -97,7 +108,7 @@ interpretation VSIDS: hmstruct_with_prio where
   subgoal using double\<^sub>p_le_iff_le_or_eq by auto
   subgoal using transp_def double\<^sub>p_trans_le by auto
   subgoal using transp_def double\<^sub>p_trans_lt by auto
-  subgoal using double\<^sub>p_le_iff_le_or_eq double\<^sub>p_total_le by (auto simp: totalp_on_def)
+  subgoal using double\<^sub>p_total_lt by (simp add: totalpI)
   done
 *)
 subsection \<open>Linorder instantiation\<close>
@@ -218,13 +229,15 @@ lemma float\<^sub>p_plus_sign0: \<open>is_positive_float x \<Longrightarrow> is_
 
 lemma float\<^sub>p_plus_closure: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> is_positive_float (x + y)\<close>
   by (simp add: is_positive_float_def float\<^sub>p_plus_notNaN float\<^sub>p_plus_sign0)
-  
+
+lemma double_plus_closure: \<open>is_positive_double x \<Longrightarrow> is_positive_double y \<Longrightarrow> is_positive_double (x + y)\<close>
+  by transfer (rule float\<^sub>p_plus_closure)
 
 instantiation double\<^sub>p :: plus
 begin
 
 lift_definition plus_double\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> double\<^sub>p\<close> is \<open>(+) :: double \<Rightarrow> double \<Rightarrow> double\<close>
-  by transfer (rule float\<^sub>p_plus_closure)
+  by transfer (rule double_plus_closure)
 
 instance ..
 

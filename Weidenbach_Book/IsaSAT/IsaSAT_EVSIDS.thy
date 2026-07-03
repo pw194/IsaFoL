@@ -22,7 +22,7 @@ interpretation VSIDS: hmstruct_with_prio where
   subgoal using double\<^sub>p_le_iff_le_or_eq by auto
   subgoal using transp_def double\<^sub>p_trans_le by auto
   subgoal using transp_def double\<^sub>p_trans_lt by auto
-  subgoal using double\<^sub>p_le_iff_le_or_eq double\<^sub>p_total_le by (auto simp: totalp_on_def)
+  subgoal using double\<^sub>p_total_lt by (simp add: totalpI)
   done
 
 definition vsids_tl_pre :: \<open>'a \<Rightarrow> ('a, 'v) vsids \<Rightarrow> bool\<close> where
