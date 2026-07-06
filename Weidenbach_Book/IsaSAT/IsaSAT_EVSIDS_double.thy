@@ -292,4 +292,43 @@ instance double\<^sub>p :: linorder
   subgoal using double\<^sub>p_total_le by auto
   done
 
+subsection \<open>Constants\<close>
+
+text \<open>EVSIDS needs a limit that once exceeded, triggers a re-score of the scores and inc\<close>
+text \<open>The below definition is inspired by CADICAL and corresponds to 
+      2^500 \<approx> 3.273390607896142 \<cdot> 10^150\<close>
+definition evsids_limit_word :: \<open>64 word\<close> where
+  \<open>evsids_limit_word = 0x5F30000000000000\<close>
+
+definition evsids_limit_float :: \<open>(11, 52) float\<close> where
+ \<open>evsids_limit_float = dp_const_aux evsids_limit_word\<close>
+
+definition evsids_limit :: \<open>double\<^sub>p\<close> where
+  \<open>evsids_limit = const_double\<^sub>p evsids_limit_word\<close>
+
+text \<open>2^-500, mirror of vsids_limit = 2^500 (0x5F3 = 1023+500)\<close>
+definition evsids_rescale_factor_word :: \<open>64 word\<close> where
+  \<open>evsids_rescale_factor_word = 0x20B0000000000000\<close> 
+
+definition evsids_rescale_factor_float :: \<open>(11, 52) float\<close> where
+ \<open>evsids_rescale_factor_float = dp_const_aux evsids_rescale_factor_word\<close>
+
+definition evsids_rescale_factor :: \<open>double\<^sub>p\<close> where
+  \<open>evsids_rescale_factor = const_double\<^sub>p evsids_rescale_factor_word\<close>
+
+subsection \<open>Helpers\<close>
+lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> x \<le> x + y\<close>
+  unfolding is_positive_float_def plus_float_def fadd_def
+  apply (cases \<open>is_infinity x\<close>; cases \<open>is_infinity y\<close>)
+     apply (simp_all only: simp_thms is_positive_float_def if_True if_False roundmode.distinct if_cancel)
+  subgoal by (simp add: float\<^sub>p_le_iff_le_or_eq is_positive_float_def) 
+  subgoal by (simp add: float\<^sub>p_le_iff_le_or_eq is_positive_float_def)
+  subgoal by (metis float_le_inf_simps(3) float_neg_sign infinity_simps'(1) is_infinity_alt) 
+  subgoal by (smt (verit, ccfv_threshold) bound_at_worst_lemma defloat_float_zerosign_round_finite float_cases_finite float_class_consts(8) float_le float_le_inf_simps(3)
+        infinity_float_def round.simps(1) signzero_zero threshold_pos val_zero valof_nonneg zerosign_def) 
+  done
+
+lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
+  by transfer (rule float\<^sub>p_plus_mono)
+
 end

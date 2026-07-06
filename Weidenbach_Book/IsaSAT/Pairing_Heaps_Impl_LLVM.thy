@@ -1,15 +1,17 @@
 theory Pairing_Heaps_Impl_LLVM
-  imports Pairing_Heap_LLVM.Pairing_Heaps_Impl IsaSAT_Literals_LLVM
+  imports Pairing_Heap_LLVM.Pairing_Heaps_Impl IsaSAT_Literals_LLVM IsaSAT_EVSIDS_double
 begin
 
-type_synonym hp_assn = \<open>32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 64 word ptr \<times> 32 word\<close>
+hide_const (open) NEMonad.ASSERT NEMonad.RETURN NEMonad.SPEC
+
+type_synonym hp_assn = \<open>32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> double ptr \<times> 32 word\<close>
 
 definition hp_assn :: \<open>_ \<Rightarrow> hp_assn \<Rightarrow> assn\<close> where
   \<open>hp_assn \<equiv> (IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
-    IICF_Array.array_assn uint64_nat_assn \<times>\<^sub>a atom.option_assn)\<close>
+    IICF_Array.array_assn dpfloat_assn \<times>\<^sub>a atom.option_assn)\<close>
 
 sepref_def mop_hp_read_prev_imp_code
   is \<open>uncurry mop_hp_read_prev_imp\<close>
@@ -45,7 +47,7 @@ sepref_def mop_hp_read_child_imp_code
 
 sepref_def mop_hp_read_score_imp_code
   is \<open>uncurry mop_hp_read_score_imp\<close>
-  :: \<open>atom_assn\<^sup>k *\<^sub>a hp_assn\<^sup>k \<rightarrow>\<^sub>a uint64_nat_assn\<close>
+  :: \<open>atom_assn\<^sup>k *\<^sub>a hp_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn\<close>
   unfolding mop_hp_read_score_imp_def hp_assn_def
   apply (rewrite at \<open>_! \<hole>\<close> value_of_atm_def[symmetric])
   apply (rewrite in \<open>_ ! \<hole>\<close> annot_unat_snat_upcast[where 'l=\<open>64\<close>])
@@ -105,7 +107,7 @@ sepref_def mop_hp_update_parent'_imp_code
 
 sepref_def mop_hp_set_all_imp_code
   is \<open>uncurry6 mop_hp_set_all_imp\<close>
-  ::  \<open>atom_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a uint64_nat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  ::  \<open>atom_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a atom.option_assn\<^sup>k *\<^sub>a dpfloat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
   unfolding mop_hp_set_all_imp_def hp_assn_def
   apply (rewrite at \<open>_[\<hole>:=_]\<close> value_of_atm_def[symmetric])
   apply (rewrite in \<open>_ [\<hole>:=_]\<close> annot_unat_snat_upcast[where 'l=\<open>64\<close>])
@@ -127,7 +129,7 @@ sepref_register mop_hp_set_all_imp
 
 sepref_def mop_hp_insert_impl_code
   is \<open>uncurry2 mop_hp_insert_impl\<close>
-  :: \<open>atom_assn\<^sup>k *\<^sub>a uint64_nat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  :: \<open>atom_assn\<^sup>k *\<^sub>a dpfloat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
   unfolding mop_hp_insert_impl_def
     atom.fold_option
   by sepref
@@ -209,9 +211,8 @@ sepref_def mop_source_node_impl_code
   by sepref
 
 sepref_register
-  "source_node_impl :: (nat,nat)pairing_heaps_imp \<Rightarrow> _"
+  "source_node_impl :: (nat,double\<^sub>p)pairing_heaps_imp \<Rightarrow> _"
 
-hide_const (open) NEMonad.ASSERT NEMonad.RETURN NEMonad.SPEC
 lemma mop_unroot_hp_tree_alt_def:
   \<open>mop_unroot_hp_tree arr h = do {
     a \<leftarrow> mop_source_node_impl arr;
@@ -242,7 +243,7 @@ lemma mop_unroot_hp_tree_alt_def:
     (auto intro!: bind_cong[OF refl] simp: Let_def)
 
 sepref_def mop_unroot_hp_tree_code
-  is \<open>uncurry (mop_unroot_hp_tree :: (nat,nat)pairing_heaps_imp \<Rightarrow> _)\<close>
+  is \<open>uncurry (mop_unroot_hp_tree :: (nat,double\<^sub>p)pairing_heaps_imp \<Rightarrow> _)\<close>
   :: \<open>hp_assn\<^sup>d *\<^sub>a atom_assn\<^sup>k \<rightarrow>\<^sub>a hp_assn\<close>
   unfolding mop_unroot_hp_tree_alt_def
     atom.fold_option short_circuit_conv
@@ -250,7 +251,7 @@ sepref_def mop_unroot_hp_tree_code
 
 sepref_def mop_hp_update_score_imp_code
   is \<open>uncurry2 mop_hp_update_score_imp\<close>
-  :: \<open>atom_assn\<^sup>k *\<^sub>a uint64_nat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  :: \<open>atom_assn\<^sup>k *\<^sub>a dpfloat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
   unfolding mop_hp_update_score_imp_def hp_assn_def
   apply (rewrite at \<open>_[\<hole>:=_]\<close> value_of_atm_def[symmetric])
   apply (rewrite in \<open>_ [\<hole>:=_]\<close> annot_unat_snat_upcast[where 'l=\<open>64\<close>])
@@ -262,7 +263,7 @@ lemma Some_eq_not_None_sepref_id_work_around: \<open>Some h = a \<longleftrighta
 
 sepref_def mop_rescale_and_reroot_code
   is \<open>uncurry2 mop_rescale_and_reroot\<close>
-  :: \<open>atom_assn\<^sup>k *\<^sub>a uint64_nat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  :: \<open>atom_assn\<^sup>k *\<^sub>a dpfloat_assn\<^sup>k *\<^sub>a hp_assn\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
   unfolding mop_rescale_and_reroot_def Some_eq_not_None_sepref_id_work_around
   unfolding atom.fold_option short_circuit_conv
   by sepref
@@ -321,7 +322,6 @@ lemma mop_hp_read_score_imp_mop_hp_read_score2:
   Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>nat_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: mop_hp_read_score_imp_mop_hp_read_score[THEN order_trans])
-
 
 thm mop_hp_read_score_imp_mop_hp_read_score
 definition acids_assn :: \<open>_\<close> where
