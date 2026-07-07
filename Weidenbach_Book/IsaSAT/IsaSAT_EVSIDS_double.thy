@@ -83,11 +83,13 @@ sepref_register
   "0 :: double\<^sub>p"
   "1 :: double\<^sub>p"
   const_double\<^sub>p
-
+  
+definition \<open>float\<^sub>p_rel = br id (\<lambda>x. is_positive_float x)\<close>
 
 definition "dpfloat_rel_aux \<equiv> br dp_from_float is_positive_float"
 
 definition "dpfloat_rel \<equiv> dfloat_rel O dpfloat_rel_aux"
+
 abbreviation "dpfloat_assn \<equiv> pure dpfloat_rel"
 
 

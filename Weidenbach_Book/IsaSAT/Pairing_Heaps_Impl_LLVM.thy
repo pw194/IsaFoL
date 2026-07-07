@@ -284,54 +284,53 @@ sepref_def mop_vsids_pop_min2_impl_code
 
 lemma mop_hp_insert_impl_spec2:
   \<open>(uncurry2 mop_hp_insert_impl, uncurry2 hp_insert) \<in>
-    nat_rel \<times>\<^sub>f nat_rel \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
-    \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
+    nat_rel \<times>\<^sub>f Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
+    \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI) (auto intro!: mop_hp_insert_impl_spec[THEN order_trans])
 
 lemma mop_rescale_and_reroot_spec2:
    \<open>(uncurry2 mop_rescale_and_reroot, uncurry2 rescale_and_reroot) \<in>
-    nat_rel \<times>\<^sub>f nat_rel \<times>\<^sub>f  \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
-    \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
+    nat_rel \<times>\<^sub>f Id \<times>\<^sub>f  \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
+    \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI) (auto intro!: mop_rescale_and_reroot_spec[THEN order_trans])
 
 lemma rescale_and_reroot_mop_prio_change_weight2:
-  \<open>(uncurry2 rescale_and_reroot, uncurry2 (PR_CONST ACIDS.mop_prio_change_weight)) \<in>
-  nat_rel \<times>\<^sub>f  nat_rel \<times>\<^sub>f acids_encoded_hmrel \<rightarrow>\<^sub>f \<langle>acids_encoded_hmrel\<rangle>nres_rel\<close>
+  \<open>(uncurry2 rescale_and_reroot, uncurry2 (PR_CONST EVSIDS.mop_prio_change_weight)) \<in>
+  nat_rel \<times>\<^sub>f Id \<times>\<^sub>f acids_encoded_hmrel \<rightarrow>\<^sub>f \<langle>acids_encoded_hmrel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: rescale_and_reroot_mop_prio_change_weight[THEN order_trans])
 
 lemma mop_hp_is_in_spec2:
-  \<open>(uncurry mop_hp_is_in, uncurry hp_is_in) \<in> nat_rel \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>bool_rel\<rangle>nres_rel\<close>
+  \<open>(uncurry mop_hp_is_in, uncurry hp_is_in) \<in> nat_rel \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>bool_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: mop_hp_is_in_spec[THEN order_trans])
 
 lemma vsids_pop_min2_mop_prio_pop_min2:
-  \<open>(vsids_pop_min2, PR_CONST ACIDS.mop_prio_pop_min) \<in> acids_encoded_hmrel \<rightarrow>\<^sub>f \<langle>nat_rel \<times>\<^sub>r acids_encoded_hmrel\<rangle>nres_rel\<close>
+  \<open>(vsids_pop_min2, PR_CONST EVSIDS.mop_prio_pop_min) \<in> acids_encoded_hmrel \<rightarrow>\<^sub>f \<langle>Id \<times>\<^sub>r acids_encoded_hmrel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: vsids_pop_min2_mop_prio_pop_min[THEN order_trans])
 
 lemma mop_vsids_pop_min2_impl2:
   shows \<open>(mop_vsids_pop_min2_impl, vsids_pop_min2) \<in>
-    \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
-    \<langle>nat_rel \<times>\<^sub>r \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
+    \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
+    \<langle>Id \<times>\<^sub>r \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: mop_vsids_pop_min2_impl[THEN order_trans])
 
 lemma mop_hp_read_score_imp_mop_hp_read_score2:
   \<open>(uncurry mop_hp_read_score_imp, uncurry mop_hp_read_score) \<in>
-  Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>nat_rel\<rangle>nres_rel\<close>
+  Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>Id\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: mop_hp_read_score_imp_mop_hp_read_score[THEN order_trans])
 
-thm mop_hp_read_score_imp_mop_hp_read_score
-definition acids_assn :: \<open>_\<close> where
-  \<open>acids_assn = hr_comp (hr_comp hp_assn (\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel))
+definition evsids_assn :: \<open>_\<close> where
+  \<open>evsids_assn = hr_comp (hr_comp hp_assn (\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel))
               acids_encoded_hmrel\<close>
 
-lemmas [fcomp_norm_unfold] = acids_assn_def[symmetric]
+lemmas [fcomp_norm_unfold] = evsids_assn_def[symmetric]
 
-sepref_register ACIDS.mop_prio_change_weight ACIDS.mop_prio_insert
-  ACIDS.mop_prio_pop_min ACIDS.mop_prio_is_in
+sepref_register EVSIDS.mop_prio_change_weight EVSIDS.mop_prio_insert
+  EVSIDS.mop_prio_pop_min EVSIDS.mop_prio_is_in
 
 lemmas [sepref_fr_rules] =
   mop_hp_insert_impl_code.refine[FCOMP mop_hp_insert_impl_spec2, FCOMP hp_insert_spec_mop_prio_insert2]

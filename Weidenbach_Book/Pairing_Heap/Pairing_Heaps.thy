@@ -3,6 +3,7 @@ theory Pairing_Heaps
     Isabelle_LLVM.IICF
     More_Sepref.WB_More_Refinement
     Heaps_Abs
+    IsaSAT.IsaSAT_EVSIDS_double
 begin
 
 section \<open>Pairing Heaps\<close>
@@ -553,7 +554,7 @@ lemma hp_parent_children_in_nodes:
     hp_parent_in_nodes option.collapse)
 
 lemma hp_parent_hp_child:
-  \<open>distinct_mset ((mset_nodes (a::('a,nat)hp))) \<Longrightarrow> hp_child n a \<noteq> None \<Longrightarrow> map_option node (hp_parent (node (the (hp_child n a))) a) = Some n\<close>
+  \<open>distinct_mset ((mset_nodes (a::('a,'b)hp))) \<Longrightarrow> hp_child n a \<noteq> None \<Longrightarrow> map_option node (hp_parent (node (the (hp_child n a))) a) = Some n\<close>
   apply (induction n a rule: hp_child.induct)
   subgoal for  n a sc x children
     apply (simp add: hp_parent_simps_if)
@@ -579,7 +580,7 @@ lemma hp_parent_hp_child:
 
 
 lemma hp_child_hp_parent:
-  \<open>distinct_mset ((mset_nodes (a::('a,nat)hp))) \<Longrightarrow> hp_parent n a \<noteq> None \<Longrightarrow> map_option node (hp_child (node (the (hp_parent n a))) a) = Some n\<close>
+  \<open>distinct_mset ((mset_nodes (a::('a,'b)hp))) \<Longrightarrow> hp_parent n a \<noteq> None \<Longrightarrow> map_option node (hp_child (node (the (hp_parent n a))) a) = Some n\<close>
   apply (induction n a rule: hp_parent.induct)
   subgoal for  n a sc x children
     apply (simp add: hp_parent_simps_if)
@@ -2772,6 +2773,16 @@ end
 
 interpretation ACIDS: hmstruct_with_prio where
   le = \<open>(\<ge>) :: nat \<Rightarrow> nat \<Rightarrow> bool\<close> and
+  lt = \<open>(>)\<close>
+  apply unfold_locales
+  subgoal by auto
+  subgoal by auto
+  subgoal by (auto simp: transp_def)
+  subgoal by (auto simp: totalp_on_def)
+  done
+
+interpretation EVSIDS: hmstruct_with_prio where
+  le = \<open>(\<ge>) :: double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> and
   lt = \<open>(>)\<close>
   apply unfold_locales
   subgoal by auto
