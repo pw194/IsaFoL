@@ -3,7 +3,7 @@ theory Pairing_Heaps
     Isabelle_LLVM.IICF
     More_Sepref.WB_More_Refinement
     Heaps_Abs
-    IsaSAT.IsaSAT_EVSIDS_double
+    Double_Linorder
 begin
 
 section \<open>Pairing Heaps\<close>

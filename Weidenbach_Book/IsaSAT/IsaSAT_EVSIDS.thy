@@ -2,7 +2,7 @@ theory IsaSAT_EVSIDS
   imports IsaSAT_Literals
     Pairing_Heap_LLVM.Heaps_Abs
     Watched_Literals_VMTF
-    IsaSAT_EVSIDS_double
+    Pairing_Heap_LLVM.Double_Linorder
 begin
 
 section \<open>EVSIDS\<close>

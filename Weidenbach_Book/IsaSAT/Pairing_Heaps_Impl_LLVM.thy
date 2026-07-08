@@ -1,5 +1,5 @@
 theory Pairing_Heaps_Impl_LLVM
-  imports Pairing_Heap_LLVM.Pairing_Heaps_Impl IsaSAT_Literals_LLVM IsaSAT_EVSIDS_double
+  imports Pairing_Heap_LLVM.Pairing_Heaps_Impl IsaSAT_Literals_LLVM
 begin
 
 hide_const (open) NEMonad.ASSERT NEMonad.RETURN NEMonad.SPEC

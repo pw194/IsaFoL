@@ -1,4 +1,4 @@
-theory IsaSAT_EVSIDS_double
+theory Double_Linorder
   imports Isabelle_LLVM.IICF Isabelle_LLVM.Float_Setup
 begin
 

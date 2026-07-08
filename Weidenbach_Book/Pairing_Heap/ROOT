@@ -16,6 +16,7 @@ session "Pairing_Heap_LLVM" (Weidenbach_Book) = "Isabelle_LLVM"  +
     Relational_Pairing_Heaps
     Pairing_Heaps
     Pairing_Heaps_Impl
+    Double_Linorder
 
 
   document_files
