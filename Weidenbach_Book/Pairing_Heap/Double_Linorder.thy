@@ -348,24 +348,36 @@ lemma evsids_limit_word_nonZero: \<open>\<not>is_zero (float_of_fp64 0x5F3000000
 lemma evsids_limit_word_nonInf: \<open>\<not>is_infinity (float_of_fp64 0x5F30000000000000)\<close>
   by eval
 
+lemma evsids_limit_nonZero: \<open>\<not>is_zero\<^sub>p evsids_limit\<close>
+  by eval
+
+lemma evsids_limit_nonInf: \<open>\<not>is_infinity\<^sub>p evsids_limit\<close>
+  by eval
+
 lemma mop_dpconst_evsids_limit[simp]:
   \<open>mop_dpconst evsids_limit_word = RETURN evsids_limit\<close>
   unfolding mop_dpconst_def evsids_limit_def evsids_limit_word_def
   by (simp add: evsids_limit_word_positive)
 
-lemma evsids_rescore_factor_positive: \<open>is_positive_float (float_of_fp64 0x20B0000000000000)\<close>
+lemma evsids_rescore_factor_word_positive: \<open>is_positive_float (float_of_fp64 0x20B0000000000000)\<close>
   by eval
 
-lemma evsids_rescore_factornonZero: \<open>\<not>is_zero (float_of_fp64 0x20B0000000000000)\<close>
+lemma evsids_rescore_factor_word_nonZero: \<open>\<not>is_zero (float_of_fp64 0x20B0000000000000)\<close>
   by eval
 
-lemma evsids_rescore_factor_nonInf: \<open>\<not>is_infinity (float_of_fp64 0x20B0000000000000)\<close>
+lemma evsids_rescore_factor_word_nonInf: \<open>\<not>is_infinity (float_of_fp64 0x20B0000000000000)\<close>
+  by eval
+
+lemma evsids_rescore_factor_nonZero: \<open>\<not>is_zero\<^sub>p evsids_rescore_factor\<close>
+  by eval
+
+lemma evsids_rescore_factor_nonInf: \<open>\<not>is_infinity\<^sub>p evsids_rescore_factor\<close>
   by eval
 
 lemma mop_dpconst_evsids_rescore_factor[simp]:
   \<open>mop_dpconst evsids_rescore_factor_word = RETURN evsids_rescore_factor\<close>
   unfolding mop_dpconst_def evsids_rescore_factor_def evsids_rescore_factor_word_def
-  by (simp add: evsids_rescore_factor_positive)
+  by (simp add: evsids_rescore_factor_word_positive)
 
 lemma evsids_decay_factor_word_positive: \<open>is_positive_float (float_of_fp64 0x3FF0D79435E53BC5)\<close>
   by eval
@@ -374,6 +386,12 @@ lemma evsids_decay_factor_word_nonZero: \<open>\<not>is_zero (float_of_fp64 0x3F
   by eval
 
 lemma evsids_decay_factor_word_nonInf: \<open>\<not>is_infinity (float_of_fp64 0x3FF0D79435E53BC5)\<close>
+  by eval
+
+lemma evsids_decay_factor_nonZero: \<open>\<not>is_zero\<^sub>p evsids_decay_factor\<close>
+  by eval
+
+lemma evsids_decay_factor_nonInf: \<open>\<not>is_infinity\<^sub>p evsids_decay_factor\<close>
   by eval
 
 lemma mop_dpconst_evsids_decay_factor[simp]:

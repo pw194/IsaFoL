@@ -159,16 +159,16 @@ proof -
 qed
 
 (*TODO: Rescaling*)
-definition evsids_rescale :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids\<close> where
-  \<open>evsids_rescale = (\<lambda>((\<B>, b, w), inc).
-     ((\<B>, b, \<lambda>L. let x = w L * evsids_rescale_factor in if x \<le> evsids_limit then x else evsids_limit),
-      (let i = inc * evsids_rescale_factor in if i \<le> evsids_limit then i else evsids_limit)))\<close>
+definition evsids_rescore :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids\<close> where
+  \<open>evsids_rescore = (\<lambda>((\<B>, b, w), inc).
+     ((\<B>, b, \<lambda>L. let x = w L * evsids_rescore_factor in if x \<le> evsids_limit then x else evsids_limit),
+      (let i = inc * evsids_rescore_factor in if i \<le> evsids_limit then i else evsids_limit)))\<close>
 
-lemma evsids_rescale_in_evsids:
+lemma evsids_rescore_in_evsids:
   assumes "set_mset \<B> = set_mset \<A>" and "b \<subseteq># \<A>"
     and "\<forall>L \<in>#\<A>. L \<notin># b \<longrightarrow> defined_lit M (Pos L)" and "distinct_mset b"
-  shows \<open>evsids_rescale ((\<B>, b, w), inc) \<in> evsids \<A> M\<close>
-  using assms unfolding evsids_rescale_def evsids_def by (auto simp: Let_def)
+  shows \<open>evsids_rescore ((\<B>, b, w), inc) \<in> evsids \<A> M\<close>
+  using assms unfolding evsids_rescore_def evsids_def by (auto simp: Let_def)
 
 definition evsids_push_literal_pre where
   \<open>evsids_push_literal_pre \<A> L = (\<lambda>vc. L \<in># \<A>)\<close>
@@ -181,26 +181,24 @@ definition evsids_push_literal :: \<open>nat \<Rightarrow> (nat, double\<^sub>p)
     let w = (if w \<le> lim then w else lim);
     let w' = w + inc;
     vc \<leftarrow> EVSIDS.mop_prio_insert_maybe L w' vc;
-    if lim < w' then RETURN (evsids_rescale (vc, inc))
+    if lim < w' then RETURN (evsids_rescore (vc, inc))
     else RETURN (vc, inc)
   })\<close>
 
-(*TODO: Decay*)
+(*TODO: Actual Decay monadic operation*)
 definition evsids_decay :: \<open>(nat, double\<^sub>p) evsids \<Rightarrow> (nat, double\<^sub>p) evsids nres\<close> where
   \<open>evsids_decay = (\<lambda>(vc, inc). do {
     decay \<leftarrow> mop_dpconst evsids_decay_factor_word;
     lim \<leftarrow> mop_dpconst evsids_limit_word;
-    let inc' = inc * decay;
-    if lim < inc' then RETURN (evsids_rescale (vc, inc'))
+    inc' \<leftarrow> mop_dpmul inc decay;
+    if lim < inc' then RETURN (evsids_rescore (vc, inc'))
     else RETURN (vc, inc')
   })\<close>
 
 lemma evsids_decay: \<open>vc \<in> evsids \<A> M \<Longrightarrow> evsids_decay vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
-  unfolding evsids_decay_def mop_dpconst_evsids_limit mop_dpconst_evsids_decay_factor
+  unfolding evsids_decay_def mop_dpconst_evsids_limit mop_dpconst_evsids_decay_factor mop_dpmul_def dpmul_pre_def
   apply refine_vcg
-  subgoal by (auto simp: Let_def evsids_rescale_def evsids_def)
-  subgoal by (auto simp: Let_def evsids_rescale_def evsids_def)
-  done
+  using evsids_decay_factor_nonZero evsids_decay_factor_nonInf by (auto simp: Let_def evsids_rescore_def evsids_def)
 
 lemma evsids_push_literal:
   \<open>vc \<in> evsids \<A> M \<Longrightarrow> evsids_push_literal_pre \<A> L vc \<Longrightarrow> evsids_push_literal L vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
@@ -226,7 +224,7 @@ lemma evsids_push_literal:
     dest: subset_add_mset_notin_subset)
   subgoal using double_plus\<^sub>p_mono by (auto split: if_splits; simp add: evsids_def)
   subgoal
-  by (rule evsids_rescale_in_evsids;
+  by (rule evsids_rescore_in_evsids;
       auto simp: evsids_def evsids_mset_def dest!: multi_member_split
         dest: subset_add_mset_notin_subset) 
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
@@ -238,7 +236,7 @@ lemma evsids_push_literal:
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
   subgoal
-          by (rule evsids_rescale_in_evsids;
+          by (rule evsids_rescore_in_evsids;
             auto simp: evsids_def evsids_mset_def dest!: multi_member_split
               dest: subset_add_mset_notin_subset)
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
