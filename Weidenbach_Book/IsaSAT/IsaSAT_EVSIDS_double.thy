@@ -132,7 +132,7 @@ lemma dp_mul_refine': "(uncurry mop_fmul, uncurry (RETURN oo (*))) \<in> [uncurr
     using dp_mul_refine[THEN fun_relD, THEN fun_relD, of a a' b b']
     unfolding mop_dpmul_def
     by simp
-  done  
+  done
       
       
 lemma dp_le_refine: "((\<le>), (\<le>)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> bool_rel" 
@@ -302,21 +302,25 @@ text \<open>The below definition is inspired by CADICAL and corresponds to
 definition evsids_limit_word :: \<open>64 word\<close> where
   \<open>evsids_limit_word = 0x5F30000000000000\<close>
 
-definition evsids_limit_float :: \<open>(11, 52) float\<close> where
- \<open>evsids_limit_float = dp_const_aux evsids_limit_word\<close>
-
 definition evsids_limit :: \<open>double\<^sub>p\<close> where
   \<open>evsids_limit = const_double\<^sub>p evsids_limit_word\<close>
 
-text \<open>2^-500, mirror of vsids_limit = 2^500 (0x5F3 = 1023+500)\<close>
+text \<open>EVSIDS needs a rescale factor that is applied to all scores and inc, once any of them exceeds
+      the limit above\<close>
+text \<open>2^-500, for now a flip of the vsids_limit = 2^500\<close>
 definition evsids_rescale_factor_word :: \<open>64 word\<close> where
   \<open>evsids_rescale_factor_word = 0x20B0000000000000\<close> 
 
-definition evsids_rescale_factor_float :: \<open>(11, 52) float\<close> where
- \<open>evsids_rescale_factor_float = dp_const_aux evsids_rescale_factor_word\<close>
-
 definition evsids_rescale_factor :: \<open>double\<^sub>p\<close> where
   \<open>evsids_rescale_factor = const_double\<^sub>p evsids_rescale_factor_word\<close>
+
+text \<open>EVSIDS needs a constant that increases our inc, in order to have the implicit decay happening\<close>
+text \<open>Here I went with \<approx> 1/0.95 as the factor\<close>
+definition evsids_decay_factor_word :: \<open>64 word\<close> where
+  \<open>evsids_decay_factor_word = 0x3FF0D79435E53BC5\<close> 
+
+definition evsids_decay_factor :: \<open>double\<^sub>p\<close> where
+  \<open>evsids_decay_factor = const_double\<^sub>p evsids_decay_factor_word\<close>
 
 subsection \<open>Helpers\<close>
 lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> x \<le> x + y\<close>
@@ -332,5 +336,46 @@ lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_p
 
 lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
   by transfer (rule float\<^sub>p_plus_mono)
+  
+
+experiment
+begin
+
+  sepref_definition test [llvm_code] is "\<lambda>a. doN {
+    b \<leftarrow> mop_dpconst 2;
+    RETURN (a+b)
+
+  }" :: "dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn"
+    unfolding evsids_limit_def
+    by sepref
+    
+      
+  export_llvm test
+    
+end  
+lemma evsids_limit_word_positive: \<open>is_positive_float (float_of_fp64 0x5F30000000000000)\<close>
+  by eval
+
+lemma mop_dpconst_evsids_limit[simp]:
+  \<open>mop_dpconst evsids_limit_word = RETURN evsids_limit\<close>
+  unfolding mop_dpconst_def evsids_limit_def evsids_limit_word_def
+  by (simp add: evsids_limit_word_positive)
+
+lemma evsids_rescale_factor_positive: \<open>is_positive_float (float_of_fp64 0x20B0000000000000)\<close>
+  by eval
+
+lemma mop_dpconst_evsids_rescale_factor[simp]:
+  \<open>mop_dpconst evsids_rescale_factor_word = RETURN evsids_rescale_factor\<close>
+  unfolding mop_dpconst_def evsids_rescale_factor_def evsids_rescale_factor_word_def
+  by (simp add: evsids_rescale_factor_positive)
+
+lemma evsids_decay_factor_word_positive: \<open>is_positive_float (float_of_fp64 0x3FF0D79435E53BC5)\<close>
+  by eval
+
+lemma mop_dpconst_evsids_decay_factor[simp]:
+  \<open>mop_dpconst evsids_decay_factor_word = RETURN evsids_decay_factor\<close>
+  unfolding mop_dpconst_def evsids_decay_factor_def evsids_decay_factor_word_def
+  by (simp add: evsids_decay_factor_word_positive)
+
 
 end

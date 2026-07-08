@@ -33,7 +33,8 @@ definition evsids_tl :: \<open>'a \<Rightarrow> ('a, double\<^sub>p) evsids \<Ri
     b \<leftarrow> EVSIDS.mop_prio_is_in L vc;
     if \<not>b then do {
       w \<leftarrow> EVSIDS.mop_prio_old_weight L vc;
-      let w = (if w \<le> evsids_limit then w else evsids_limit);
+      lim \<leftarrow> mop_dpconst evsids_limit_word;
+      let w = (if w \<le> lim then w else lim);
       vc \<leftarrow> EVSIDS.mop_prio_insert L w vc;
       RETURN (vc, inc)
     } else RETURN (vc, inc)
@@ -61,8 +62,8 @@ lemma evsids_tl:
       defined_lit_map evsids_tl_pre_def dest: subset_add_mset_notin_subset
       dest: multi_member_split)
     apply (smt (verit, best) image_iff not_hd_in_tl)
-      apply (metis mset_add mset_subset_eq_add_mset_cancel subset_add_mset_notin_subset)
-    by (smt (verit, ccfv_threshold) image_iff in_hd_or_tl_conv)
+    apply (metis mset_add mset_subset_eq_add_mset_cancel subset_add_mset_notin_subset)
+   by (smt (verit, ccfv_threshold) image_iff in_hd_or_tl_conv)
   done
 
 definition evsids_get_min :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> 'a nres\<close> where
@@ -167,7 +168,7 @@ lemma evsids_rescale_in_evsids:
   assumes "set_mset \<B> = set_mset \<A>" and "b \<subseteq># \<A>"
     and "\<forall>L \<in>#\<A>. L \<notin># b \<longrightarrow> defined_lit M (Pos L)" and "distinct_mset b"
   shows \<open>evsids_rescale ((\<B>, b, w), inc) \<in> evsids \<A> M\<close>
-  using assms unfolding evsids_rescale_def evsids_def apply (auto simp: Let_def) done
+  using assms unfolding evsids_rescale_def evsids_def by (auto simp: Let_def)
 
 definition evsids_push_literal_pre where
   \<open>evsids_push_literal_pre \<A> L = (\<lambda>vc. L \<in># \<A>)\<close>
@@ -175,13 +176,31 @@ definition evsids_push_literal_pre where
 definition evsids_push_literal :: \<open>nat \<Rightarrow> (nat, double\<^sub>p) evsids \<Rightarrow> (nat, double\<^sub>p) evsids nres\<close> where
   \<open>evsids_push_literal L = (\<lambda>(vc, inc). do {
     ASSERT (L \<in># fst vc);
+    lim \<leftarrow> mop_dpconst evsids_limit_word;
     w \<leftarrow> EVSIDS.mop_prio_old_weight L vc;
-    let w = (if w \<le> evsids_limit then w else evsids_limit);
+    let w = (if w \<le> lim then w else lim);
     let w' = w + inc;
     vc \<leftarrow> EVSIDS.mop_prio_insert_maybe L w' vc;
-    if evsids_limit < w' then RETURN (evsids_rescale (vc, inc))
+    if lim < w' then RETURN (evsids_rescale (vc, inc))
     else RETURN (vc, inc)
   })\<close>
+
+(*TODO: Decay*)
+definition evsids_decay :: \<open>(nat, double\<^sub>p) evsids \<Rightarrow> (nat, double\<^sub>p) evsids nres\<close> where
+  \<open>evsids_decay = (\<lambda>(vc, inc). do {
+    decay \<leftarrow> mop_dpconst evsids_decay_factor_word;
+    lim \<leftarrow> mop_dpconst evsids_limit_word;
+    let inc' = inc * decay;
+    if lim < inc' then RETURN (evsids_rescale (vc, inc'))
+    else RETURN (vc, inc')
+  })\<close>
+
+lemma evsids_decay: \<open>vc \<in> evsids \<A> M \<Longrightarrow> evsids_decay vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
+  unfolding evsids_decay_def mop_dpconst_evsids_limit mop_dpconst_evsids_decay_factor
+  apply refine_vcg
+  subgoal by (auto simp: Let_def evsids_rescale_def evsids_def)
+  subgoal by (auto simp: Let_def evsids_rescale_def evsids_def)
+  done
 
 lemma evsids_push_literal:
   \<open>vc \<in> evsids \<A> M \<Longrightarrow> evsids_push_literal_pre \<A> L vc \<Longrightarrow> evsids_push_literal L vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
@@ -189,6 +208,7 @@ lemma evsids_push_literal:
     EVSIDS.mop_prio_old_weight_def evsids_push_literal_pre_def
     EVSIDS.mop_prio_insert_def EVSIDS.mop_prio_change_weight_def
     EVSIDS.mop_prio_is_in_def
+    mop_dpconst_evsids_limit
   apply refine_vcg
   subgoal by (auto simp: evsids_def evsids_mset_def)
   subgoal by (auto simp: evsids_def dest!: multi_member_split)

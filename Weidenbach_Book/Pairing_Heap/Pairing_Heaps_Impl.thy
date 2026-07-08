@@ -724,31 +724,25 @@ proof -
     subgoal by (auto dest: source_node_spec)
     subgoal by auto
     subgoal by auto
-    subgoal sorry
-    (*subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    subgoal by auto
-    apply (solves auto)
-    subgoal by auto
-    subgoal by auto
-    apply (solves auto)
-    subgoal by simp
-    apply (solves auto)
-    apply (solves auto)
-    done*)
-    sorry
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    subgoal by clarsimp
+    done
 qed
 
 lemma vsids_pass\<^sub>1_alt_def:
