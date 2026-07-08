@@ -1434,10 +1434,11 @@ proof -
           all_learned_lits_of_l_def get_learned_clss_l_def
           dest!: multi_member_split[of _ \<open>dom_m _\<close>]
           cong: )
-        apply (smt (verit, best) image_mset_cong2)+
-        apply (metis in_clause_in_all_lits_of_m set_mset_mset)
+        apply (smt (verit, ccfv_threshold) image_mset_cong2)
+        apply (smt (verit, del_insts) image_mset_cong2)
         apply (metis all_lits_of_m_add_mset member_add_mset multi_member_split set_mset_mset)
-        apply (smt (verit, best) image_mset_cong2)+
+          apply (metis add_mset_commute all_lits_of_m_add_mset multi_member_split set_mset_mset union_single_eq_member)
+        apply (smt (verit, del_insts) image_mset_cong2)+
         done
       done
 
