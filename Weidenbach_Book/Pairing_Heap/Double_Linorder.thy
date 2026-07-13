@@ -21,13 +21,13 @@ typedef double\<^sub>p = \<open>{x::(11,52) float. is_positive_float x}\<close>
 
 setup_lifting type_definition_double\<^sub>p
 
-lift_definition is_zero\<^sub>p :: "double\<^sub>p \<Rightarrow> bool" is is_zero .
-lift_definition is_infinity\<^sub>p :: "double\<^sub>p \<Rightarrow> bool" is is_infinity .
+lift_definition is_zero\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> bool\<close> is is_zero .
+lift_definition is_infinity\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> bool\<close> is is_infinity .
 
 
-lemma dp_from_float_inverse'[simp]: "is_positive_float x \<Longrightarrow> dp_to_float (dp_from_float x) = x" by (simp add: dp_from_float_inverse)
+lemma dp_from_float_inverse'[simp]: \<open>is_positive_float x \<Longrightarrow> dp_to_float (dp_from_float x) = x\<close> by (simp add: dp_from_float_inverse)
 lemmas [simp] = dp_to_float_inverse
-lemma dp_to_float'[simp]: "is_positive_float (dp_to_float x)" using dp_to_float by blast
+lemma dp_to_float'[simp]: \<open>is_positive_float (dp_to_float x)\<close> using dp_to_float by blast
  
  
 instantiation double\<^sub>p :: plus
@@ -42,8 +42,8 @@ end
 
 
 instantiation double\<^sub>p :: ord begin
-  lift_definition less_eq_double\<^sub>p :: "double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool" is \<open>(\<le>) :: (11,52) float \<Rightarrow> (11,52) float \<Rightarrow> _\<close> .
-  lift_definition less_double\<^sub>p :: "double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool" is \<open>(<) :: (11,52) float \<Rightarrow> (11,52) float \<Rightarrow> _\<close> .
+  lift_definition less_eq_double\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> is \<open>(\<le>) :: (11,52) float \<Rightarrow> (11,52) float \<Rightarrow> _\<close> .
+  lift_definition less_double\<^sub>p :: \<open>double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> is \<open>(<) :: (11,52) float \<Rightarrow> (11,52) float \<Rightarrow> _\<close> .
   
   instance ..
 end
@@ -60,18 +60,18 @@ instantiation double\<^sub>p :: times begin
   instance ..
 end
   
-definition "dp_const_aux w \<equiv> let f = float_of_fp64 w in if is_positive_float f then f else 0"
-lift_definition const_double\<^sub>p :: "64 word \<Rightarrow> double\<^sub>p" is "dp_const_aux"
+definition \<open>dp_const_aux w \<equiv> let f = float_of_fp64 w in if is_positive_float f then f else 0\<close>
+lift_definition const_double\<^sub>p :: \<open>64 word \<Rightarrow> double\<^sub>p\<close> is \<open>dp_const_aux\<close>
   unfolding dp_const_aux_def Let_def by (auto simp: is_positive_float_def)
 
 
 instantiation double\<^sub>p :: zero begin
-  lift_definition zero_double\<^sub>p :: double\<^sub>p is "0" unfolding is_positive_float_def by simp
+  lift_definition zero_double\<^sub>p :: double\<^sub>p is \<open>0\<close> unfolding is_positive_float_def by simp
   instance ..
 end
 
 instantiation double\<^sub>p :: one begin
-  lift_definition one_double\<^sub>p :: double\<^sub>p is "1" unfolding is_positive_float_def by simp
+  lift_definition one_double\<^sub>p :: double\<^sub>p is \<open>1\<close> unfolding is_positive_float_def by simp
   instance ..
 end
 
@@ -93,25 +93,25 @@ definition "dpfloat_rel \<equiv> dfloat_rel O dpfloat_rel_aux"
 abbreviation "dpfloat_assn \<equiv> pure dpfloat_rel"
 
 
-lemma rel2p_dpfloat_rel_aux[rel2p]: "rel2p dpfloat_rel_aux = cr_double\<^sub>p"
+lemma rel2p_dpfloat_rel_aux[rel2p]: \<open>rel2p dpfloat_rel_aux = cr_double\<^sub>p\<close>
   unfolding cr_double\<^sub>p_def dpfloat_rel_aux_def in_br_conv rel2p_def by (auto simp: fun_eq_iff)
 
-lemma p2rel_cr_double\<^sub>p[simp]: "p2rel cr_double\<^sub>p = dpfloat_rel_aux"
+lemma p2rel_cr_double\<^sub>p[simp]: \<open>p2rel cr_double\<^sub>p = dpfloat_rel_aux\<close>
   unfolding cr_double\<^sub>p_def dpfloat_rel_aux_def p2rel_def by (auto simp: in_br_conv)
 
 
-lemma dp_add_refine: "(mop_fadd, RETURN oo (+)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel" 
+lemma dp_add_refine: \<open>(mop_fadd, RETURN oo (+)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel\<close> 
   unfolding mop_fadd_def nanize_float_def dpfloat_rel_aux_def
   by (auto 
     simp: in_br_conv pw_nres_rel_iff refine_pw_simps IEEE.plus_float_def is_nan_fadd 
       is_positive_float_def sign0_fadd plus_double\<^sub>p.abs_eq eq_onp_same_args) (* TODO: Looks like we prove invar-pres again here *)
   
 
-definition "dpmul_pre a b \<equiv> (is_zero\<^sub>p a \<longrightarrow> \<not>is_infinity\<^sub>p b) \<and> (is_zero\<^sub>p b \<longrightarrow> \<not>is_infinity\<^sub>p a)"  
+definition \<open>dpmul_pre a b \<equiv> (is_zero\<^sub>p a \<longrightarrow> \<not>is_infinity\<^sub>p b) \<and> (is_zero\<^sub>p b \<longrightarrow> \<not>is_infinity\<^sub>p a)\<close>
       
-definition "mop_dpmul a b \<equiv> doN { ASSERT (dpmul_pre a b); RETURN (a*b) }"
+definition \<open>mop_dpmul a b \<equiv> doN { ASSERT (dpmul_pre a b); RETURN (a*b) }\<close>
       
-lemma dp_mul_refine: "(mop_fmul, mop_dpmul) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel" 
+lemma dp_mul_refine: \<open>(mop_fmul, mop_dpmul) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel\<close> 
   unfolding mop_fmul_def mop_dpmul_def dpmul_pre_def
   apply refine_vcg
   unfolding nanize_float_def
@@ -126,7 +126,7 @@ lemma dp_mul_refine: "(mop_fmul, mop_dpmul) \<in> dpfloat_rel_aux \<rightarrow> 
     by (metis (lifting) ext dp_from_float_inverse dp_to_float' eq_onp_same_args fmul\<^sub>p_def is_positive_float_def mem_Collect_eq nnan_nfin_eq_inf times_double\<^sub>p.abs_eq times_double\<^sub>p.rep_eq)
   done    
   
-lemma dp_mul_refine': "(uncurry mop_fmul, uncurry (RETURN oo (*))) \<in> [uncurry dpmul_pre]\<^sub>f dpfloat_rel_aux \<times>\<^sub>r dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel"
+lemma dp_mul_refine': \<open>(uncurry mop_fmul, uncurry (RETURN oo (*))) \<in> [uncurry dpmul_pre]\<^sub>f dpfloat_rel_aux \<times>\<^sub>r dpfloat_rel_aux \<rightarrow> \<langle>dpfloat_rel_aux\<rangle>nres_rel\<close>
   apply (intro frefI; clarsimp)
   subgoal for a b a' b'
     using dp_mul_refine[THEN fun_relD, THEN fun_relD, of a a' b b']
@@ -135,24 +135,23 @@ lemma dp_mul_refine': "(uncurry mop_fmul, uncurry (RETURN oo (*))) \<in> [uncurr
   done
       
       
-lemma dp_le_refine: "((\<le>), (\<le>)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> bool_rel" 
+lemma dp_le_refine: \<open>((\<le>), (\<le>)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> bool_rel\<close>
   unfolding dpfloat_rel_aux_def
   by (auto simp: in_br_conv less_eq_double\<^sub>p.rep_eq)
 
-lemma dp_lt_refine: "((<), (<)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> bool_rel" 
+lemma dp_lt_refine: \<open>((<), (<)) \<in> dpfloat_rel_aux \<rightarrow> dpfloat_rel_aux \<rightarrow> bool_rel\<close>
   unfolding dpfloat_rel_aux_def
   by (auto simp: in_br_conv less_double\<^sub>p.rep_eq)
   
-lemma dp_0_refine: "(op_fp64_0,0)\<in>dpfloat_rel_aux"  
+lemma dp_0_refine: \<open>(op_fp64_0,0)\<in>dpfloat_rel_aux\<close>
   unfolding dpfloat_rel_aux_def
   by (auto simp: in_br_conv op_fp64_0_def zero_double\<^sub>p_def is_positive_float_def)
   
-lemma dp_1_refine: "(op_fp64_1,1)\<in>dpfloat_rel_aux"  
+lemma dp_1_refine: \<open>(op_fp64_1,1)\<in>dpfloat_rel_aux\<close>  
   unfolding dpfloat_rel_aux_def
   by (auto simp: in_br_conv simp flip: float_of_fp64_1 simp: is_positive_float_def one_double\<^sub>p_def)
   
-  
-lemma const_doublep_refine: "(float_of_fp64, const_double\<^sub>p) \<in> [\<lambda>w. is_positive_float (float_of_fp64 w)]\<^sub>f word_rel \<rightarrow> dpfloat_rel_aux"  
+lemma const_doublep_refine: \<open>(float_of_fp64, const_double\<^sub>p) \<in> [\<lambda>w. is_positive_float (float_of_fp64 w)]\<^sub>f word_rel \<rightarrow> dpfloat_rel_aux\<close> 
   apply (intro frefI; clarsimp)
   unfolding dpfloat_rel_aux_def in_br_conv
   by (simp add: const_double\<^sub>p_def dp_const_aux_def)
@@ -176,11 +175,11 @@ begin
 end    
     
   
-definition "mop_dpconst w \<equiv> doN {ASSERT (is_positive_float (float_of_fp64 w)); RETURN (const_double\<^sub>p w) }"
+definition \<open>mop_dpconst w \<equiv> doN {ASSERT (is_positive_float (float_of_fp64 w)); RETURN (const_double\<^sub>p w) }\<close>
   
 sepref_register mop_dpconst
 
-sepref_def mop_dpconst_impl [llvm_inline] is "mop_dpconst" :: "word_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn"
+sepref_def mop_dpconst_impl [llvm_inline] is \<open>mop_dpconst\<close> :: \<open>word_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn\<close>
   unfolding mop_dpconst_def
   by sepref
 
@@ -188,18 +187,18 @@ sepref_def mop_dpconst_impl [llvm_inline] is "mop_dpconst" :: "word_assn\<^sup>k
 experiment
 begin
 
-  sepref_definition test [llvm_code] is "\<lambda>a. doN {
+  sepref_definition test [llvm_code] is \<open>\<lambda>a. doN {
     let b = a+1;
     b \<leftarrow> mop_dpmul a b; \<comment> \<open>mop-operation, includes assertion\<close>
     RETURN (0\<le>b \<and> b<1)
-  }" :: "dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a bool1_assn"
+  }\<close> :: \<open>dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a bool1_assn\<close>
     by sepref
 
     
-  sepref_definition test2 [llvm_code] is "\<lambda>a. doN {
+  sepref_definition test2 [llvm_code] is \<open>\<lambda>a. doN {
     ASSERT (dpmul_pre a (a+1)); \<comment> \<open>Explicit assertion, proof is done during sepref (can be slower and harder to debug)\<close>
     RETURN (0 \<le> a*(a+1) \<and> a*(a+1) < 1)
-  }" :: "dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a bool1_assn"
+  }\<close> :: \<open>dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a bool1_assn\<close>
     by sepref
     
       
@@ -323,7 +322,37 @@ definition evsids_decay_factor :: \<open>double\<^sub>p\<close> where
   \<open>evsids_decay_factor = const_double\<^sub>p evsids_decay_factor_word\<close>
 
 subsection \<open>Helpers\<close>
-text \<open>Monotonicity\<close>
+
+subsubsection \<open>Misc\<close>
+lemma valof_le_implies_float_le:
+  assumes \<open>\<not>is_nan a\<close> \<open>\<not>is_nan b\<close> \<open>\<not>is_infinity a\<close> \<open>\<not>is_infinity b\<close> \<open>valof a \<le> valof b\<close>
+  shows \<open>a \<le> b\<close>
+  using assms unfolding less_eq_float_def fle_def fcompare_def
+  by (auto split: if_splits)
+
+lemma is_positive_valof_ge_0: \<open>is_positive_float x \<Longrightarrow> valof x \<ge> 0\<close>
+  unfolding is_positive_float_def by (simp add: valof_nonneg) 
+
+lemma zero_le_all: \<open>is_positive_float x \<Longrightarrow> 0 \<le> x\<close>
+  unfolding less_eq_float_def fle_def fcompare_def is_positive_float_def
+  using less_eq_real_def valof_nonneg by auto 
+
+lemma zero_times_is_zero: \<open>\<lbrakk>is_positive_float z; is_positive_float x\<rbrakk> \<Longrightarrow> is_zero z \<Longrightarrow> \<not>is_infinity x \<Longrightarrow> z * x = 0\<close>
+  unfolding times_float_def fmul_def apply (simp split: if_splits)
+  by (metis float_distinct(7) is_positive_float_def mult_zero_left val_zero zerosign_round_z(1)) 
+
+lemma all_le_inf: \<open>\<lbrakk>is_positive_float x; is_positive_float y\<rbrakk> \<Longrightarrow> is_infinity y \<Longrightarrow> x \<le> y\<close>
+  unfolding less_eq_float_def fle_def fcompare_def is_positive_float_def
+  by (auto split: if_splits)
+
+lemma inf_is_top: \<open>\<lbrakk>is_positive_float x; is_positive_float y\<rbrakk> \<Longrightarrow> is_infinity x \<Longrightarrow> x \<le> y \<Longrightarrow> is_infinity y\<close>
+  using all_le_inf float\<^sub>p_antisym by auto
+
+lemma zerosign_is_id: \<open>is_positive_float x \<Longrightarrow> zerosign 0 x = x\<close>
+  unfolding is_positive_float_def zerosign_def
+  by (metis float_sel_simps(8) is_zero_cases zero_neq_one) 
+
+subsubsection \<open>Monotonicity lemmas (+)\<close>
 lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_positive_float y \<Longrightarrow> x \<le> x + y\<close>
   unfolding is_positive_float_def plus_float_def fadd_def
   apply (cases \<open>is_infinity x\<close>; cases \<open>is_infinity y\<close>)
@@ -338,7 +367,124 @@ lemma float\<^sub>p_plus_mono: \<open>is_positive_float x \<Longrightarrow> is_p
 lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
   by transfer (rule float\<^sub>p_plus_mono)
 
-text \<open>Constant helpers\<close>
+subsubsection \<open>Monotonicity lemmas (*)\<close>
+thm defloat_float_zerosign_round_finite
+lemma float\<^sub>p_fmul\<^sub>p_mono:
+  fixes x y z :: \<open>('e::len2,'f) float\<close>
+  assumes px: \<open>is_positive_float x\<close> and py: \<open>is_positive_float y\<close> and pz: \<open>is_positive_float z\<close> and x_le_y: \<open>x \<le> y\<close>
+  shows \<open>fmul\<^sub>p z x \<le> fmul\<^sub>p z y\<close>
+proof -
+
+  have closure_zy: \<open>is_positive_float (fmul\<^sub>p z y)\<close>
+    using pz py unfolding is_positive_float_def
+    by (auto simp: fmul\<^sub>p_def times_float_def sign0_fmul is_nan_fmul)
+
+  have le_implies_zero: \<open>is_zero y \<Longrightarrow> is_zero x\<close>
+    unfolding is_positive_float_def using assms
+    by (metis float\<^sub>p_antisym float_sel_simps(8) is_positive_float_def is_zero_alt zero_le_all zero_neq_one) 
+
+  show ?thesis
+  proof (cases \<open>(is_zero z \<and> is_infinity x) \<or> (is_infinity z \<and> is_zero x)\<close>)
+    case True
+    then show ?thesis
+      apply (rule disjE)
+      unfolding fmul\<^sub>p_def using zero_le_all closure_zy by (auto split: if_splits simp: fmul\<^sub>p_def)
+  next
+    case False
+    note outer_False = False
+    then show ?thesis
+    proof (cases \<open>(is_zero z \<and> is_infinity y) \<or> (is_infinity z \<and> is_zero y)\<close>)
+      case True
+      then show ?thesis 
+        apply (rule disjE)
+        subgoal unfolding fmul\<^sub>p_def by (auto split: if_splits; simp add: px pz zero_times_is_zero le_implies_zero)
+        subgoal unfolding fmul\<^sub>p_def by (auto split: if_splits; simp add: le_implies_zero)
+        done
+    next
+      case False
+      have rewr: \<open>((if is_zero z \<and> is_infinity x \<or> is_infinity z \<and> is_zero x then 0 else z * x) \<le> (if is_zero z \<and> is_infinity y \<or> is_infinity z \<and> is_zero y then 0 else z * y)) = (z * x \<le> z * y)\<close>
+        using outer_False False by auto
+      show ?thesis 
+        unfolding fmul\<^sub>p_def rewr
+        unfolding times_float_def fmul_def
+        using assms outer_False False 
+        apply (simp only: simp_thms if_False if_True if_cancel is_positive_float_def)
+        apply (cases \<open>is_infinity z \<or> is_infinity x\<close>)
+        subgoal by (smt (verit, ccfv_threshold) all_le_inf float\<^sub>p_antisym float_le_infinity float_le_not_nan(2) px py) 
+        apply (cases \<open>is_infinity z \<or> is_infinity y\<close>)
+        subgoal by auto
+        subgoal apply (simp only: simp_thms if_False if_True if_cancel is_positive_float_def)
+        proof -
+          assume A1: \<open>\<not>(is_infinity z \<or> is_infinity x)\<close> and A2: \<open>\<not>(is_infinity z \<or> is_infinity y)\<close>
+          have FZ: \<open>is_finite z\<close> and FX: \<open>is_finite x\<close> and FY: \<open>is_finite y\<close>
+            using A1 A2 is_positive_float_def nnan_nfin_eq_inf px py pz by blast+
+
+          have VZ0: \<open>valof z \<ge> 0\<close>
+            using FZ pz zero_le_all by fastforce 
+
+          have VXY: \<open>valof x \<le> valof y\<close>
+            using FX FY x_le_y by auto 
+
+          have VZXZY: \<open>valof z * valof x \<le> valof z * valof y\<close>
+            by (simp add: pz is_positive_valof_ge_0 VXY mult_left_mono) 
+
+         show \<open>zerosign 0 (IEEE.round To_nearest (valof z * valof x) :: ('e::len2,'f) float)
+                  \<le> zerosign 0 (IEEE.round To_nearest (valof z * valof y))\<close>
+         proof -
+              let ?vzx = \<open>valof z * valof x\<close> and ?vzy = \<open>valof z * valof y\<close>
+              let ?rzx = \<open>IEEE.round To_nearest ?vzx :: ('e::len2,'f) float\<close>
+              let ?rzy = \<open>IEEE.round To_nearest ?vzy :: ('e::len2,'f) float\<close>
+              
+              have VX0: \<open>0 \<le> valof x\<close> and VY0: \<open>0 \<le> valof y\<close>
+                using px py is_positive_valof_ge_0 by blast+
+              have ZX0: \<open>0 \<le> ?vzx\<close> and ZY0: \<open>0 \<le> ?vzy\<close>
+                using VZ0 VX0 VY0 by auto
+              have NON_NAN: \<open>\<not> is_nan (IEEE.round To_nearest x :: ('e::len2,'f) float)\<close> for x
+                by auto
+             
+             show ?thesis
+             proof (cases \<open>?vzy < threshold TYPE(('e::len2,'f) float)\<close>)
+               case True
+             have TY: \<open>\<bar>?vzy\<bar> < threshold TYPE(('e::len2,'f) float)\<close>
+               using True ZY0 by simp
+             have TX: \<open>\<bar>?vzx\<bar> < threshold TYPE(('e::len2,'f) float)\<close>
+               using VZXZY True ZX0 by simp
+             have FRX: \<open>is_finite ?rzx\<close> and FRY: \<open>is_finite ?rzy\<close>
+               using TX TY defloat_float_zerosign_round_finite is_finite_zerosign by blast+
+             have VLE: \<open>valof ?rzx \<le> valof ?rzy\<close>
+               by (rule round_mono[OF VZXZY FRX FRY])
+             have FZX: \<open>is_finite (zerosign 0 ?rzx)\<close> and FZY: \<open>is_finite (zerosign 0 ?rzy)\<close>
+               using TX TY defloat_float_zerosign_round_finite by blast+
+             have NN1: \<open>\<not> is_nan (zerosign 0 ?rzx)\<close> and NN2: \<open>\<not> is_nan (zerosign 0 ?rzy)\<close>
+               using FZX FZY nan_not_finite by blast+
+             have NI1: \<open>\<not> is_infinity (zerosign 0 ?rzx)\<close> and NI2: \<open>\<not> is_infinity (zerosign 0 ?rzy)\<close>
+               using FZX FZY finite_infinity by blast+
+             have V: \<open>valof (zerosign 0 ?rzx) \<le> valof (zerosign 0 ?rzy)\<close>
+               using VLE by (auto simp: zerosign_def val_zero)
+             show ?thesis
+               supply[[show_types, show_sorts]] using valof_le_implies_float_le[OF NN1 NN2 NI1 NI2 V] by auto
+           next
+               case False
+               have \<open>\<not> ?vzy \<le> - threshold TYPE(('e::len2,'f) float)\<close>
+                 by (smt (verit) ZY0 threshold_negative)
+               then have RY: \<open>?rzy = \<infinity>\<close>
+                 using False by (simp add: IEEE.round.simps)
+               have overflow: \<open>zerosign 0 ?rzy = \<infinity>\<close>
+                 by (simp add: RY zerosign_def)
+               then show ?thesis
+                 using overflow by auto 
+             qed
+           qed
+         qed
+       done
+    qed
+  qed
+qed
+
+lemma double\<^sub>p_fmul\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> y \<Longrightarrow> z * x \<le> z * y\<close>
+  by transfer (rule float\<^sub>p_fmul\<^sub>p_mono)
+
+subsubsection \<open>Constant helpers\<close>
 lemma evsids_limit_word_positive: \<open>is_positive_float (float_of_fp64 0x5F30000000000000)\<close>
   by eval
 
@@ -399,8 +545,29 @@ lemma mop_dpconst_evsids_decay_factor[simp]:
   unfolding mop_dpconst_def evsids_decay_factor_def evsids_decay_factor_word_def
   by (simp add: evsids_decay_factor_word_positive)
 
+subsection \<open>Sepref constants\<close>
 
-subsubsection \<open>Experiments\<close>
+sepref_register mop_dpmul evsids_limit evsids_rescore_factor evsids_decay_factor
+
+sepref_def evsids_limit_impl [llvm_inline]
+  is \<open>uncurry0 (RETURN evsids_limit)\<close>
+  :: \<open>unit_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn\<close>
+  unfolding mop_dpconst_evsids_limit[symmetric] evsids_limit_word_def
+  by sepref
+
+sepref_def evsids_rescore_factor_impl [llvm_inline]
+  is \<open>uncurry0 (RETURN evsids_rescore_factor)\<close>
+  :: \<open>unit_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn\<close>
+  unfolding mop_dpconst_evsids_rescore_factor[symmetric] evsids_rescore_factor_word_def
+  by sepref
+
+sepref_def evsids_decay_factor_impl [llvm_inline]
+  is \<open>uncurry0 (RETURN evsids_decay_factor)\<close>
+  :: \<open>unit_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn\<close>
+  unfolding mop_dpconst_evsids_decay_factor[symmetric] evsids_decay_factor_word_def
+  by sepref
+
+subsection \<open>Experiments\<close>
 
 (*Experiment: Testing out mop_dpconst*)
 experiment
@@ -410,6 +577,17 @@ begin
     mop_dpmul b a
   }" :: "dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn"
     unfolding evsids_rescore_factor_word_def
+    by sepref
+    
+  export_llvm test
+end  
+
+(*Experiment: Testing out the raw constants with the new sepref register*)
+experiment
+begin
+  sepref_definition test [llvm_code] is "\<lambda>a. doN {
+    mop_dpmul evsids_rescore_factor a
+  }" :: "dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a dpfloat_assn"
     by sepref
     
   export_llvm test

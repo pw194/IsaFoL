@@ -4,14 +4,14 @@ begin
 
 hide_const (open) NEMonad.ASSERT NEMonad.RETURN NEMonad.SPEC
 
-type_synonym hp_assn = \<open>32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> double ptr \<times> 32 word\<close>
+type_synonym hp_assn = \<open>32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> (64 word \<times> double ptr) \<times> 32 word\<close>
 
 definition hp_assn :: \<open>_ \<Rightarrow> hp_assn \<Rightarrow> assn\<close> where
   \<open>hp_assn \<equiv> (IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
     IICF_Array.array_assn atom.option_assn \<times>\<^sub>a
-    IICF_Array.array_assn dpfloat_assn \<times>\<^sub>a atom.option_assn)\<close>
+    larray64_assn dpfloat_assn \<times>\<^sub>a atom.option_assn)\<close>
 
 sepref_def mop_hp_read_prev_imp_code
   is \<open>uncurry mop_hp_read_prev_imp\<close>
@@ -322,6 +322,63 @@ lemma mop_hp_read_score_imp_mop_hp_read_score2:
   Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f \<langle>Id\<rangle>nres_rel\<close>
   by (intro frefI nres_relI)
    (auto intro!: mop_hp_read_score_imp_mop_hp_read_score[THEN order_trans])
+
+(*Todo: Rescoring*)
+definition mop_imp_needs_rescaling
+  :: \<open>('a,'b)pairing_heaps_imp \<Rightarrow> double\<^sub>p \<Rightarrow> bool nres\<close> where
+  \<open>mop_imp_needs_rescaling = (\<lambda>_ m.
+   RETURN (m > evsids_limit))\<close>
+
+
+sepref_def mop_imp_needs_rescaling_code
+  is \<open>uncurry mop_imp_needs_rescaling\<close>
+  :: \<open>hp_assn\<^sup>k *\<^sub>a dpfloat_assn\<^sup>k \<rightarrow>\<^sub>a bool1_assn\<close>
+  unfolding mop_imp_needs_rescaling_def evsids_limit_word_def
+  by sepref
+
+lemma mop_imp_needs_rescaling_mop_hp_needs_rescaling:
+  \<open>(uncurry Pairing_Heaps_Impl_LLVM.mop_imp_needs_rescaling,
+   uncurry Pairing_Heaps_Impl.mop_imp_needs_rescaling) \<in> Id \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>bool_rel\<rangle>nres_rel \<close>
+  unfolding mop_imp_needs_rescaling_def Pairing_Heaps_Impl.mop_hp_needs_rescaling_def
+   Pairing_Heaps_Impl.mop_imp_needs_rescaling_def
+  by (auto intro!: nres_relI frefI)
+
+definition mop_hp_needs_rescaling2 :: \<open>(nat multiset \<times> (nat,'c) hp_fun \<times> nat option) \<Rightarrow> double\<^sub>p \<Rightarrow> bool nres\<close> where
+  \<open>mop_hp_needs_rescaling2 = (\<lambda>(\<V>, (prevs, nxts, childs, parents, scores), h) m. SPEC (\<lambda>_. True))\<close>
+
+lemma mop_imp_needs_rescaling_mop_hp_needs_rescaling2:
+  \<open>(uncurry Pairing_Heaps_Impl_LLVM.mop_imp_needs_rescaling, uncurry mop_hp_needs_rescaling2)
+    \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>bool_rel\<rangle>nres_rel\<close>
+  unfolding mop_imp_needs_rescaling_def Pairing_Heaps_Impl.mop_hp_needs_rescaling_def
+   mop_hp_needs_rescaling2_def
+  by (auto intro!: nres_relI frefI)
+
+lemmas [sepref_fr_rules] =
+  mop_imp_needs_rescaling_code.refine[FCOMP mop_imp_needs_rescaling_mop_hp_needs_rescaling2, unfolded hp_assn_def]
+
+sepref_register Pairing_Heaps_Impl.mop_imp_needs_rescaling
+
+sepref_def mop_imp_decreases_weights_pure_rescale_code
+  is \<open>uncurry mop_imp_decreases_weights_only\<close>
+  :: \<open>dpfloat_assn\<^sup>k *\<^sub>a (hp_assn)\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  supply [[goals_limit=1]]
+  supply [sepref_fr_rules] = mop_imp_needs_rescaling_code.refine[FCOMP mop_imp_needs_rescaling_mop_hp_needs_rescaling]
+  unfolding mop_imp_decreases_weights_only_def mop_hp_needs_rescaling_def[symmetric]
+    hp_assn_def
+  apply (annot_snat_const \<open>TYPE(64)\<close>)
+  by sepref
+
+thm mop_imp_needs_rescaling_code.refine[FCOMP mop_imp_needs_rescaling_mop_hp_needs_rescaling]
+
+sepref_def mop_imp_decrease_weights_code
+  is \<open>uncurry mop_imp_decreases_weights\<close>
+  :: \<open>dpfloat_assn\<^sup>k *\<^sub>a (hp_assn)\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>
+  supply [[goals_limit=1]]
+  supply [sepref_fr_rules] = mop_imp_needs_rescaling_code.refine[FCOMP mop_imp_needs_rescaling_mop_hp_needs_rescaling]
+  unfolding mop_imp_decreases_weights_def mop_hp_needs_rescaling_def[symmetric]
+  by sepref
+
+(* End rescoring *)
 
 definition evsids_assn :: \<open>_\<close> where
   \<open>evsids_assn = hr_comp (hr_comp hp_assn (\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel))

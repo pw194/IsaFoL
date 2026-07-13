@@ -2771,6 +2771,55 @@ qed
 
 end
 
+definition (in hmstruct_with_prio) mop_hm_change_all_weights :: \<open>_ \<Rightarrow> _\<close> where
+  \<open>mop_hm_change_all_weights = (\<lambda>(\<A>, b, w). do {
+  no_rescaling \<leftarrow> SPEC (\<lambda>_. True);
+  if no_rescaling then RETURN ((\<A>, b, w))
+  else do {
+      w' \<leftarrow> RES UNIV;
+      RETURN ((\<A>, b, w'))
+  }})\<close>
+
+fun hp_rescale_weight where
+  \<open>hp_rescale_weight \<beta> (Hp x s xs) = (Hp x (\<beta> * s) (map (hp_rescale_weight \<beta>) xs))\<close>
+
+lemma mset_nodes_hp_rescale_weight[simp]: \<open>mset_nodes (hp_rescale_weight \<beta> h) = mset_nodes h\<close>
+  by (induction h rule: hp_rescale_weight.induct) (auto simp: comp_def cong: list.map_cong)
+
+lemma set_hp_hp_rescale_weight[simp]: \<open>set_hp (hp_rescale_weight \<beta> h) = (\<lambda>x. \<beta> * x) ` set_hp h\<close>
+  by (induction h rule: hp_rescale_weight.induct) auto
+
+locale pairing_heap_assms2 = pairing_heap_assms lt le +
+  hmstruct_with_prio lt le +
+  hmstruct_with_prio lt le
+  for lt :: \<open>'a::{times, zero, plus} \<Rightarrow> 'a \<Rightarrow> bool\<close> and
+      le :: \<open>'a \<Rightarrow> 'a \<Rightarrow> bool\<close> +
+  assumes ordered:
+    \<open>\<And>a b c :: 'a. le a b \<Longrightarrow> le (c * a) (c * b)\<close>
+begin
+
+definition mop_hm_decreases_weights where
+  \<open>mop_hm_decreases_weights \<beta> = (\<lambda>(\<B>, xs). do {
+  needs_rescaling \<leftarrow> SPEC (\<lambda>_. True);
+  if needs_rescaling then RETURN (\<B>, xs)
+  else RETURN (\<B>, map_option (hp_rescale_weight \<beta>) xs)
+  })\<close>
+
+lemma invar_hp_rescale_weight:
+  shows \<open>invar (Some xs) \<Longrightarrow> invar (Some (hp_rescale_weight \<beta> xs))\<close>
+  by (induction xs) (auto simp: invar_def intro!: ordered)
+
+lemma mop_hm_decreases_weights_mop_prio_change_weights:
+  assumes \<open>(x, m) \<in> hmrel\<close>
+  shows \<open>mop_hm_decreases_weights \<beta> x \<le> \<Down> (hmrel) (mop_hm_change_all_weights m)\<close>
+  using assms
+  unfolding mop_hm_decreases_weights_def mop_hm_change_all_weights_def
+  by refine_rcg
+    (auto simp: hmrel_def RES_RETURN_RES RETURN_RES_refine_iff
+      intro: invar_hp_rescale_weight map_option_case split: option.splits)
+
+end
+
 interpretation ACIDS: hmstruct_with_prio where
   le = \<open>(\<ge>) :: nat \<Rightarrow> nat \<Rightarrow> bool\<close> and
   lt = \<open>(>)\<close>
@@ -2781,7 +2830,7 @@ interpretation ACIDS: hmstruct_with_prio where
   subgoal by (auto simp: totalp_on_def)
   done
 
-interpretation EVSIDS: hmstruct_with_prio where
+interpretation EVSIDS: pairing_heap_assms2 where
   le = \<open>(\<ge>) :: double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> and
   lt = \<open>(>)\<close>
   apply unfold_locales
@@ -2789,6 +2838,7 @@ interpretation EVSIDS: hmstruct_with_prio where
   subgoal by auto
   subgoal by (auto simp: transp_def)
   subgoal by (auto simp: totalp_on_def)
+  subgoal by (simp add: double\<^sub>p_fmul\<^sub>p_mono) 
   done
 
 end
