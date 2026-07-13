@@ -2771,8 +2771,8 @@ qed
 
 end
 
-definition (in hmstruct_with_prio) mop_hm_change_all_weights :: \<open>_ \<Rightarrow> _\<close> where
-  \<open>mop_hm_change_all_weights = (\<lambda>(\<A>, b, w). do {
+definition (in hmstruct_with_prio) mop_hm_change_all_weights :: \<open>_ \<Rightarrow> _ \<Rightarrow> _\<close> where
+  \<open>mop_hm_change_all_weights = (\<lambda>old (\<A>, b, w). do {
   no_rescaling \<leftarrow> SPEC (\<lambda>_. True);
   if no_rescaling then RETURN ((\<A>, b, w))
   else do {
@@ -2811,7 +2811,7 @@ lemma invar_hp_rescale_weight:
 
 lemma mop_hm_decreases_weights_mop_prio_change_weights:
   assumes \<open>(x, m) \<in> hmrel\<close>
-  shows \<open>mop_hm_decreases_weights \<beta> x \<le> \<Down> (hmrel) (mop_hm_change_all_weights m)\<close>
+  shows \<open>mop_hm_decreases_weights \<beta> x \<le> \<Down> (hmrel) (mop_hm_change_all_weights old m)\<close>
   using assms
   unfolding mop_hm_decreases_weights_def mop_hm_change_all_weights_def
   by refine_rcg

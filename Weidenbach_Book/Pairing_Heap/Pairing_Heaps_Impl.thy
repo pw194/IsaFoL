@@ -1360,7 +1360,8 @@ lemma mop_hp_read_score_imp_mop_hp_read_score:
 definition mop_imp_needs_rescaling :: \<open>('a,'b)pairing_heaps_imp \<Rightarrow> 'c \<Rightarrow> bool nres\<close> where
   \<open>mop_imp_needs_rescaling = (\<lambda>_ _. SPEC (\<lambda>_. True))\<close>
 
-definition mop_imp_decreases_weights_only :: \<open>'b :: {ord,times,zero} \<Rightarrow> ('a,'b)pairing_heaps_imp \<Rightarrow> (('a,'b)pairing_heaps_imp) nres\<close> where
+definition mop_imp_decreases_weights_only
+  :: \<open>double\<^sub>p \<Rightarrow> ('a, double\<^sub>p)pairing_heaps_imp \<Rightarrow> (('a, double\<^sub>p)pairing_heaps_imp) nres\<close> where
  \<open>mop_imp_decreases_weights_only \<beta> = (\<lambda>(prevs', nxts', children', parents', scores', h'). do {
      let l = length scores';
      (_, i, scores') \<leftarrow> WHILE\<^sub>T\<^bsup>(\<lambda>(finished, i, xs).
@@ -1368,12 +1369,17 @@ definition mop_imp_decreases_weights_only :: \<open>'b :: {ord,times,zero} \<Rig
            (finished \<longrightarrow> (i = l - 1 \<or> l = 0) \<and> xs = (map (\<lambda>x. \<beta> * x) scores'))
             )\<^esup>
        (\<lambda>(finished, i, xs). \<not>finished)
-       (\<lambda>(finished, i, xs). do { ASSERT (\<not>finished); ASSERT (l > 0); let finished = (i = l - 1) in RETURN (finished, if finished then i else Suc i, xs[i := \<beta> * xs ! i])})
+       (\<lambda>(finished, i, xs). do {
+          ASSERT (\<not>finished);
+          ASSERT (l > 0);
+          ASSERT (dpmul_pre \<beta> (xs ! i));
+          let finished = (i = l - 1) in
+          RETURN (finished, if finished then i else Suc i, xs[i := \<beta> * xs ! i])})
        (l = 0, 0, scores');
      RETURN (prevs', nxts', children', parents', scores', h')
   })\<close>
 
-definition mop_imp_decreases_weights :: \<open>'b :: {ord,times,zero} \<Rightarrow> ('a,'b)pairing_heaps_imp \<Rightarrow> (('a,'b)pairing_heaps_imp) nres\<close> where
+definition mop_imp_decreases_weights :: \<open>double\<^sub>p \<Rightarrow> ('a,double\<^sub>p)pairing_heaps_imp \<Rightarrow> (('a,double\<^sub>p)pairing_heaps_imp) nres\<close> where
  \<open>mop_imp_decreases_weights \<beta> = (\<lambda>h. do {
    rescaling \<leftarrow> mop_imp_needs_rescaling h \<beta>;
    if \<not>rescaling then RETURN h
@@ -1400,7 +1406,7 @@ lemma take_last_update_identical_mul: \<open>length x1l > 0 \<Longrightarrow> ta
 
 (*Todo*)
 lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
-  assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close>
+  assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close> and \<open>\<not>is_zero\<^sub>p \<beta>\<close> and \<open>\<not>is_infinity\<^sub>p \<beta>\<close>
   shows \<open>mop_imp_decreases_weights_only \<beta> xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (mop_hp_decreases_weights_only \<beta>' ys)\<close>
   supply [simp] = take_last_update_identical_mul
   using assms
@@ -1414,7 +1420,9 @@ lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
   subgoal by auto
   subgoal by auto
   subgoal by auto
-  subgoal by auto
+  subgoal by (auto simp: dpmul_pre_def)
+  subgoal by (auto simp: pairing_heaps_rel_def map_fun_rel_def map_option_case comp_def eq_commute[of \<open>_ ! _\<close>]
+        take_Suc_conv_app_nth nth_append list_update_append simp flip: Cons_nth_drop_Suc)
   subgoal by (auto simp: pairing_heaps_rel_def map_fun_rel_def map_option_case comp_def eq_commute[of \<open>_ ! _\<close>]
         take_Suc_conv_app_nth nth_append list_update_append simp flip: Cons_nth_drop_Suc)
   subgoal by auto
@@ -1426,7 +1434,7 @@ lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
   done
 
 lemma mop_imp_decreases_weights_mop_hp_decreases_weights:
-  assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close>
+  assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close> and \<open>\<not>is_zero\<^sub>p \<beta>\<close> and \<open>\<not>is_infinity\<^sub>p \<beta>\<close>
   shows \<open>mop_imp_decreases_weights \<beta> xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (mop_hp_decreases_weights \<beta>' ys)\<close>
   supply [simp] = take_last_update_identical_mul
   using assms
