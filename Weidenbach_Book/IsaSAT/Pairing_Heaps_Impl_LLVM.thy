@@ -326,8 +326,7 @@ lemma mop_hp_read_score_imp_mop_hp_read_score2:
 (*Todo: rescoring*)
 definition mop_imp_needs_rescaling
   :: \<open>('a,'b)pairing_heaps_imp \<Rightarrow> double\<^sub>p \<Rightarrow> bool nres\<close> where
-  \<open>mop_imp_needs_rescaling = (\<lambda>_ m.
-   RETURN (m > evsids_limit))\<close>
+  \<open>mop_imp_needs_rescaling = (\<lambda>_ m. RETURN (m > evsids_limit))\<close>
 
 
 sepref_def mop_imp_needs_rescaling_code
@@ -513,9 +512,9 @@ lemmas [sepref_fr_rules] =
 lemma mop_imp_decreases_weights_mop_hp_decreases_weights2:
   \<open>(uncurry mop_imp_decreases_weights, uncurry mop_hp_decreases_weights) \<in>
    [\<lambda>(\<beta>, _). \<not>is_zero\<^sub>p \<beta> \<and> \<not>is_infinity\<^sub>p \<beta>]\<^sub>f
-     (Id :: (double\<^sub>p \<times> double\<^sub>p) set) \<times>\<^sub>f
-     \<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id :: (double\<^sub>p \<times> double\<^sub>p) set\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>
-   \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id :: (double\<^sub>p \<times> double\<^sub>p) set\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
+     Id \<times>\<^sub>f
+     \<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>
+   \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
   unfolding uncurry_def
   apply (intro nres_relI frefI)
   subgoal for x y

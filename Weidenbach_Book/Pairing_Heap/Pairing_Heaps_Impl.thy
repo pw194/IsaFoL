@@ -1404,7 +1404,6 @@ definition mop_hp_decreases_weights :: \<open>'c :: {zero,ord,times} \<Rightarro
 lemma take_last_update_identical_mul: \<open>length x1l > 0 \<Longrightarrow> take (length x1l - Suc 0) (map (\<lambda>x. \<beta> * x) x1l) @ [\<beta> * x1l ! (length x1l - Suc 0)] = map (\<lambda>x. \<beta> * x) x1l\<close>
   by (metis (no_types, lifting) Suc_pred diff_Suc_less less_or_eq_imp_le list.simps(8) map_append map_eq_Cons_conv take_Suc_conv_app_nth take_all take_map)
 
-(*Todo*)
 lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close> and \<open>\<not>is_zero\<^sub>p \<beta>\<close> and \<open>\<not>is_infinity\<^sub>p \<beta>\<close>
   shows \<open>mop_imp_decreases_weights_only \<beta> xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (mop_hp_decreases_weights_only \<beta>' ys)\<close>

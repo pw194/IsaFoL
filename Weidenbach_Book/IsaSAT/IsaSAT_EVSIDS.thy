@@ -8,24 +8,26 @@ begin
 section \<open>EVSIDS\<close>
 
 type_synonym ('a, 'v) evsids = \<open>('a multiset \<times> 'a multiset \<times> ('a \<Rightarrow> 'v)) \<times> 'v\<close>
+
+(*Todo: missing invariant (inc \<le> evsids_limit) \<and> (\<forall>L\<in>#\<A>. w L \<le> evsids_limit)*)
 definition evsids :: \<open>'a multiset \<Rightarrow> ('a, 'ann) ann_lits \<Rightarrow> ('a, double\<^sub>p) evsids set\<close> where
 \<open>evsids \<A> M = {((\<B>, b, w), inc). set_mset \<B> = set_mset \<A> \<and> b \<subseteq># \<A> \<and> (\<forall>L \<in>#\<A>. L \<notin># b \<longrightarrow> defined_lit M (Pos L)) \<and> distinct_mset b}\<close>
 
-lemma evsids_prepend: \<open>vc \<in> evsids \<A> M \<Longrightarrow> vc \<in> evsids \<A> (L # M)\<close>
+lemma evsids_prepend: \<open>vs \<in> evsids \<A> M \<Longrightarrow> vs \<in> evsids \<A> (L # M)\<close>
   unfolding evsids_def by (auto simp: defined_lit_map)
 
 definition evsids_tl_pre :: \<open>'a \<Rightarrow> ('a, 'v) evsids \<Rightarrow> bool\<close> where
-  \<open>evsids_tl_pre L = (\<lambda>(vc, inc). L \<in># fst vc)\<close>
+  \<open>evsids_tl_pre L = (\<lambda>(vs, inc). L \<in># fst vs)\<close>
 
 definition evsids_tl :: \<open>'a \<Rightarrow> ('a, 'v::ord) evsids \<Rightarrow> ('a, 'v) evsids nres\<close> where
-  \<open>evsids_tl L = (\<lambda>(vc, inc). do {
-    ASSERT (evsids_tl_pre L (vc, inc));
-    vc \<leftarrow> EVSIDS.mop_prio_insert_unchanged L vc;
-    RETURN (vc, inc)
+  \<open>evsids_tl L = (\<lambda>(vs, inc). do {
+    ASSERT (evsids_tl_pre L (vs, inc));
+    vs \<leftarrow> EVSIDS.mop_prio_insert_unchanged L vs;
+    RETURN (vs, inc)
   })\<close>
 
 lemma evsids_tl:
-  \<open>vc \<in> evsids \<A> M \<Longrightarrow> L \<in># \<A> \<Longrightarrow> M \<noteq> [] \<Longrightarrow> L = atm_of (lit_of (hd M)) \<Longrightarrow> evsids_tl L vc \<le> RES (evsids \<A> (tl M))\<close>
+  \<open>vs \<in> evsids \<A> M \<Longrightarrow> L \<in># \<A> \<Longrightarrow> M \<noteq> [] \<Longrightarrow> L = atm_of (lit_of (hd M)) \<Longrightarrow> evsids_tl L vs \<le> RES (evsids \<A> (tl M))\<close>
   unfolding evsids_tl_def EVSIDS.mop_prio_insert_unchanged_def
     EVSIDS.mop_prio_insert_raw_unchanged_def nres_monad3
     EVSIDS.mop_prio_is_in_def
@@ -52,8 +54,8 @@ lemma evsids_tl:
   done
 
 definition evsids_get_min :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> 'a nres\<close> where
-  \<open>evsids_get_min = (\<lambda>(vc, inc). do {
-    L \<leftarrow> EVSIDS.mop_prio_peek_min vc;
+  \<open>evsids_get_min = (\<lambda>(vs, inc). do {
+    L \<leftarrow> EVSIDS.mop_prio_peek_min vs;
     RETURN L
   })\<close>
 
@@ -66,35 +68,35 @@ lemma evsids_get_min:
   by refine_vcg (auto simp: EVSIDS.prio_peek_min_def)
 
 definition evsids_pop_min :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> ('a \<times> ('a, double\<^sub>p) evsids) nres\<close> where
-  \<open>evsids_pop_min = (\<lambda>(vc, inc). do {
-    (v, vc) \<leftarrow> EVSIDS.mop_prio_pop_min vc;
-    RETURN (v, (vc, inc))
+  \<open>evsids_pop_min = (\<lambda>(vs, inc). do {
+    (v, vs) \<leftarrow> EVSIDS.mop_prio_pop_min vs;
+    RETURN (v, (vs, inc))
   })\<close>
 
 definition evsids_find_next_undef :: \<open>nat multiset \<Rightarrow> (nat, double\<^sub>p) evsids \<Rightarrow> (nat, nat) ann_lits \<Rightarrow> (nat option \<times> (nat, double\<^sub>p) evsids) nres\<close> where
-\<open>evsids_find_next_undef \<A> = (\<lambda>vc M. do {
-  WHILE\<^sub>T\<^bsup>(\<lambda>(L, vc).
-        (L = None \<longrightarrow> vc \<in> evsids \<A> M) \<and>
-        (L \<noteq> None \<longrightarrow> vc \<in> evsids \<A> (Decided (Pos (the L)) # M) \<and> Pos (the L) \<in># \<L>\<^sub>a\<^sub>l\<^sub>l \<A> \<and> undefined_lit M (Pos (the L))))
+\<open>evsids_find_next_undef \<A> = (\<lambda>vs M. do {
+  WHILE\<^sub>T\<^bsup>(\<lambda>(L, vs).
+        (L = None \<longrightarrow> vs \<in> evsids \<A> M) \<and>
+        (L \<noteq> None \<longrightarrow> vs \<in> evsids \<A> (Decided (Pos (the L)) # M) \<and> Pos (the L) \<in># \<L>\<^sub>a\<^sub>l\<^sub>l \<A> \<and> undefined_lit M (Pos (the L))))
   \<^esup>
-      (\<lambda>(nxt, vc). nxt = None \<and> evsids_mset vc \<noteq> {#})
-      (\<lambda>(a, vc). do {
+      (\<lambda>(nxt, vs). nxt = None \<and> evsids_mset vs \<noteq> {#})
+      (\<lambda>(a, vs). do {
          ASSERT (a = None);
-         (L, vc) \<leftarrow> evsids_pop_min vc;
+         (L, vs) \<leftarrow> evsids_pop_min vs;
          ASSERT(Pos L \<in># \<L>\<^sub>a\<^sub>l\<^sub>l  \<A>);
-         if defined_lit M (Pos L) then RETURN (None, vc)
-         else RETURN (Some L, vc)
+         if defined_lit M (Pos L) then RETURN (None, vs)
+         else RETURN (Some L, vs)
         }
       )
-      (None, vc)
+      (None, vs)
   })\<close>
 
 lemma evsids_pop_min:
   \<open>evsids_mset x \<noteq> {#} \<Longrightarrow> x \<in> evsids \<A> M \<Longrightarrow>
-  evsids_pop_min x \<le> SPEC (\<lambda>(v, vc). evsids_mset vc = evsids_mset x - {#v#} \<and> v \<in># evsids_mset x \<and>
+  evsids_pop_min x \<le> SPEC (\<lambda>(v, vs). evsids_mset vs = evsids_mset x - {#v#} \<and> v \<in># evsids_mset x \<and>
     EVSIDS.prio_peek_min (fst x) v \<and>
-    (defined_lit M (Pos v) \<longrightarrow> vc \<in> evsids \<A> M) \<and>
-    (undefined_lit M (Pos v) \<longrightarrow> vc \<in> evsids \<A> (Decided (Pos v) # M)))\<close>
+    (defined_lit M (Pos v) \<longrightarrow> vs \<in> evsids \<A> M) \<and>
+    (undefined_lit M (Pos v) \<longrightarrow> vs \<in> evsids \<A> (Decided (Pos v) # M)))\<close>
   unfolding EVSIDS.mop_prio_pop_min_def evsids_pop_min_def
     EVSIDS.mop_prio_peek_min_def EVSIDS.mop_prio_del_def
   by refine_vcg
@@ -103,13 +105,13 @@ lemma evsids_pop_min:
 
 lemma evsids_find_next_undef:
   assumes
-    vmtf: \<open>vc \<in> evsids \<A> M\<close>
-  shows \<open>evsids_find_next_undef \<A> vc M
-     \<le> \<Down> Id (SPEC (\<lambda>(L, vc).
-        (L = None \<longrightarrow> vc \<in> evsids \<A> M \<and> (\<forall>L\<in>#\<L>\<^sub>a\<^sub>l\<^sub>l \<A>. defined_lit M L)) \<and>
-        (L \<noteq> None \<longrightarrow> vc \<in> evsids \<A> (Decided (Pos (the L)) # M) \<and> Pos (the L) \<in># \<L>\<^sub>a\<^sub>l\<^sub>l \<A> \<and> undefined_lit M (Pos (the L)))))\<close>
+    vmtf: \<open>vs \<in> evsids \<A> M\<close>
+  shows \<open>evsids_find_next_undef \<A> vs M
+     \<le> \<Down> Id (SPEC (\<lambda>(L, vs).
+        (L = None \<longrightarrow> vs \<in> evsids \<A> M \<and> (\<forall>L\<in>#\<L>\<^sub>a\<^sub>l\<^sub>l \<A>. defined_lit M L)) \<and>
+        (L \<noteq> None \<longrightarrow> vs \<in> evsids \<A> (Decided (Pos (the L)) # M) \<and> Pos (the L) \<in># \<L>\<^sub>a\<^sub>l\<^sub>l \<A> \<and> undefined_lit M (Pos (the L)))))\<close>
 proof -
-  have [refine0]: \<open>wf (measure (\<lambda>(_, vc). size (evsids_mset vc)))\<close>
+  have [refine0]: \<open>wf (measure (\<lambda>(_, vs). size (evsids_mset vs)))\<close>
     by auto
   show ?thesis
     unfolding evsids_find_next_undef_def
@@ -144,9 +146,9 @@ proof -
 qed
 
 definition evsids_push_literal_pre where
-  \<open>evsids_push_literal_pre \<A> L = (\<lambda>vc. L \<in># \<A>)\<close>
+  \<open>evsids_push_literal_pre \<A> L = (\<lambda>vs. L \<in># \<A>)\<close>
 
-
+(*
 definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_max :: \<open>_ \<Rightarrow>_ \<Rightarrow> _\<close> where
 \<open>mop_hm_change_all_weights_with_max = (\<lambda>old ((\<A>, \<B>, w), m). do {
   ASSERT ((\<forall>x\<in>#\<B>. w x \<le> m));
@@ -157,6 +159,7 @@ definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_max :: \<open>
      m \<leftarrow> SPEC (\<lambda>m. (\<forall>x\<in>#\<B>. w' x \<le> m) \<and> m \<ge> 0);
     RETURN ((\<A>, \<B>, w'), m)
   }})\<close>
+*)
 
 definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_inc :: \<open>_ \<Rightarrow>_ \<Rightarrow> _\<close> where
 \<open>mop_hm_change_all_weights_with_inc = (\<lambda>old ((\<A>, \<B>, w), inc). do {
@@ -168,66 +171,78 @@ definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_inc :: \<open>
     RETURN ((\<A>, \<B>, w'), inc')
   }})\<close>
 
-definition evsids_push_literal :: \<open>'a \<Rightarrow> ('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids nres\<close> where
-  \<open>evsids_push_literal L = (\<lambda>(vc, inc). do {
-  ASSERT (L \<in># fst vc);
-  (vc, inc) \<leftarrow> EVSIDS.mop_hm_change_all_weights_with_inc evsids_limit (vc, inc);
-  w \<leftarrow> EVSIDS.mop_prio_old_weight L vc;
-  let w = w + inc;
-  vc \<leftarrow> EVSIDS.mop_prio_insert_maybe L w vc;
-  RETURN (vc, inc)
+(*
+definition acids_push_literal :: \<open>'a \<Rightarrow> ('a, nat) acids \<Rightarrow> ('a, nat) acids nres\<close> where
+  \<open>acids_push_literal L = (\<lambda>(ac, m). do {
+  ASSERT (L \<in># fst ac);
+  w \<leftarrow> ACIDS.mop_prio_old_weight L ac;
+  (ac, m) \<leftarrow> ACIDS.mop_hm_change_all_weights_with_max (2^40::nat) (ac, m);
+  w \<leftarrow> ACIDS.mop_prio_old_weight L ac;
+  let w = min m w;
+  ASSERT (w \<le> m);
+  ASSERT ((m - w) div 2 \<le> m);
+  let w = m - ((m - w) div 2);
+  ac \<leftarrow> ACIDS.mop_prio_insert_maybe L w ac;
+  RETURN (ac, m)
   })\<close>
 
+*)
+
+definition evsids_push_literal :: \<open>'a \<Rightarrow> ('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids nres\<close> where
+  \<open>evsids_push_literal L = (\<lambda>(vs, inc). do {
+  ASSERT (L \<in># fst vs);
+  w \<leftarrow> EVSIDS.mop_prio_old_weight L vs;
+  (vs, inc) \<leftarrow> EVSIDS.mop_hm_change_all_weights_with_inc (w + inc) (vs, inc);
+  w \<leftarrow> EVSIDS.mop_prio_old_weight L vs;
+  let w = w + inc;
+  vs \<leftarrow> EVSIDS.mop_prio_insert_maybe L w vs;
+  RETURN (vs, inc)
+  })\<close>
+
+(*
+Pseudo:
+  1. Obtain old lit score
+  2. compute score' = score + inc
+  3. If score' > limit
+    THEN: rescale
+          recompute score'
+          push score'
+          return
+    ELSE:
+          push score'
+          return
+*)
+
 lemma (in hmstruct_with_prio)mop_prio_change_all_weights_SPEC:
-   \<open>vc' \<in> evsids \<A> M \<Longrightarrow> vc = vc'\<Longrightarrow> mop_hm_change_all_weights_with_inc w vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
+   \<open>vs' \<in> evsids \<A> M \<Longrightarrow> vs = vs'\<Longrightarrow> mop_hm_change_all_weights_with_inc w vs \<le> SPEC (\<lambda>vs. vs \<in> evsids \<A> M)\<close>
   unfolding mop_hm_change_all_weights_with_inc_def
   by refine_vcg
    (auto simp: evsids_def dest!: multi_member_split)
 
 lemma evsids_push_literal:
-  \<open>vc \<in> evsids \<A> M \<Longrightarrow> evsids_push_literal_pre \<A> L vc \<Longrightarrow> evsids_push_literal L vc \<le> SPEC (\<lambda>vc. vc \<in> evsids \<A> M)\<close>
+  \<open>vs \<in> evsids \<A> M \<Longrightarrow> evsids_push_literal_pre \<A> L vs \<Longrightarrow> evsids_push_literal L vs \<le> SPEC (\<lambda>vs. vs \<in> evsids \<A> M)\<close>
   unfolding evsids_push_literal_def EVSIDS.mop_prio_insert_maybe_def
     EVSIDS.mop_prio_old_weight_def evsids_push_literal_pre_def
     EVSIDS.mop_prio_insert_def  EVSIDS.mop_prio_change_weight_def
-    EVSIDS.mop_prio_is_in_def
+    EVSIDS.mop_prio_is_in_def                      
   apply (refine_vcg order_trans[OF EVSIDS.mop_prio_change_all_weights_SPEC])
   subgoal by (auto simp: evsids_def evsids_mset_def)
-  subgoal sorry
-  (*subgoal by (auto simp: evsids_def dest!: multi_member_split)
-  subgoal by (auto simp: EVSIDS.mop_prio_change_weight_def evsids_def
-    dest!: multi_member_split)
+  subgoal by auto
+  subgoal by auto
   apply assumption
-  subgoal by simp
-  subgoal by (auto simp: evsids_def evsids_mset_def)
+  subgoal by auto
   subgoal by (auto simp: evsids_def dest!: multi_member_split)
-  subgoal by (auto simp: evsids_def evsids_mset_def)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal
-    by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
+  subgoal by auto
+  subgoal by auto
+  subgoal by auto
+  subgoal by auto
+  subgoal by auto
+  subgoal by auto
+  subgoal by (simp add: double_plus\<^sub>p_mono) 
+  subgoal by (auto simp: evsids_def dest!: multi_member_split)
+  subgoal by auto
+  subgoal by auto
+  subgoal by auto
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
@@ -237,47 +252,63 @@ lemma evsids_push_literal:
   subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
   apply assumption
-  subgoal by simp
-  subgoal by (auto simp: acids_def acids_mset_def)
-  subgoal by (auto simp: acids_def dest!: multi_member_split)
-  subgoal by (auto simp: acids_def acids_mset_def)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by auto
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal
-    by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal using double_plus\<^sub>p_mono by blast 
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
+  subgoal by (auto simp: evsids_def evsids_mset_def dest!: multi_member_split
     dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  subgoal by (auto simp: acids_def acids_mset_def dest!: multi_member_split
-    dest: subset_add_mset_notin_subset)
-  done*)
-  sorry
+  done
+
+(*Todo: decay operation*)
+definition evsids_decay :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids nres\<close> where
+  \<open>evsids_decay = (\<lambda>(vs, inc). do {
+    ASSERT (dpmul_pre evsids_decay_factor inc);
+    (vs, inc) \<leftarrow> EVSIDS.mop_hm_change_all_weights_with_inc (evsids_decay_factor * inc) (vs, inc);
+    ASSERT (dpmul_pre evsids_decay_factor inc);
+    let inc = evsids_decay_factor * inc;
+    RETURN (vs, inc)
+  })\<close>
+
+lemma evsids_decay:
+  \<open>vs \<in> evsids \<A> M \<Longrightarrow> evsids_decay vs \<le> SPEC (\<lambda>vs. vs \<in> evsids \<A> M)\<close>
+  unfolding evsids_decay_def EVSIDS.mop_hm_change_all_weights_with_inc_def
+  apply refine_vcg
+  subgoal using evsids_decay_factor_nonZero evsids_decay_factor_nonInf
+    by (auto simp: dpmul_pre_def)
+  subgoal by (auto simp: evsids_def)
+  subgoal by (auto simp: evsids_def)
+    subgoal using evsids_decay_factor_nonZero evsids_decay_factor_nonInf
+    by (auto simp: dpmul_pre_def)
+  subgoal by (auto simp: evsids_def)
+  done
+(* End: decay operation*)
 
 definition evsids_flush_int :: \<open>nat multiset \<Rightarrow> (nat,nat) ann_lits \<Rightarrow> (nat, double\<^sub>p) evsids \<Rightarrow> _ \<Rightarrow> ((nat, double\<^sub>p) evsids \<times> _)nres\<close> where
 \<open>evsids_flush_int \<A>\<^sub>i\<^sub>n = (\<lambda>M vm (to_remove, h). do {
@@ -303,12 +334,12 @@ where
 
 lemma evsids_change_to_remove_order:
   assumes
-    vmtf: \<open>vc \<in> evsids \<A>\<^sub>i\<^sub>n M\<close> and
+    vmtf: \<open>vs \<in> evsids \<A>\<^sub>i\<^sub>n M\<close> and
     CD_rem: \<open>((C, D), to_remove) \<in> distinct_atoms_rel \<A>\<^sub>i\<^sub>n\<close> and
     nempty: \<open>isasat_input_nempty \<A>\<^sub>i\<^sub>n\<close> and
     bounded: \<open>isasat_input_bounded \<A>\<^sub>i\<^sub>n\<close> and
     t: \<open>to_remove \<subseteq> set_mset \<A>\<^sub>i\<^sub>n\<close>
-  shows \<open>evsids_flush_int \<A>\<^sub>i\<^sub>n M vc (C, D) \<le> \<Down>(Id \<times>\<^sub>r distinct_atoms_rel \<A>\<^sub>i\<^sub>n) (evsids_flush \<A>\<^sub>i\<^sub>n M vc to_remove)\<close>
+  shows \<open>evsids_flush_int \<A>\<^sub>i\<^sub>n M vs (C, D) \<le> \<Down>(Id \<times>\<^sub>r distinct_atoms_rel \<A>\<^sub>i\<^sub>n) (evsids_flush \<A>\<^sub>i\<^sub>n M vs to_remove)\<close>
 proof -
   have to_C: \<open>to_remove = set C\<close>
     using CD_rem by (auto simp: distinct_atoms_rel_def distinct_hash_atoms_rel_def)
@@ -330,7 +361,7 @@ proof -
       using simple_clss_size_upper_div2[OF bounded lits dist tauto]
       by (auto simp: unat32_max_def)
   qed
-  have acids_push_literal_pre: \<open>evsids_push_literal_pre \<A>\<^sub>i\<^sub>n (C ! i) vc\<close>
+  have acids_push_literal_pre: \<open>evsids_push_literal_pre \<A>\<^sub>i\<^sub>n (C ! i) vs\<close>
     if \<open>i < length C\<close> for i
     using t that CD_rem unfolding evsids_push_literal_pre_def distinct_atoms_rel_def
       distinct_hash_atoms_rel_def by auto

@@ -2773,8 +2773,8 @@ end
 
 definition (in hmstruct_with_prio) mop_hm_change_all_weights :: \<open>_ \<Rightarrow> _ \<Rightarrow> _\<close> where
   \<open>mop_hm_change_all_weights = (\<lambda>old (\<A>, b, w). do {
-  no_rescaling \<leftarrow> SPEC (\<lambda>_. True);
-  if no_rescaling then RETURN ((\<A>, b, w))
+  rescaling \<leftarrow> SPEC (\<lambda>_. True);
+  if \<not>rescaling then RETURN ((\<A>, b, w))
   else do {
       w' \<leftarrow> RES UNIV;
       RETURN ((\<A>, b, w'))
@@ -2800,8 +2800,8 @@ begin
 
 definition mop_hm_decreases_weights where
   \<open>mop_hm_decreases_weights \<beta> = (\<lambda>(\<B>, xs). do {
-  needs_rescaling \<leftarrow> SPEC (\<lambda>_. True);
-  if needs_rescaling then RETURN (\<B>, xs)
+  rescaling \<leftarrow> SPEC (\<lambda>_. True);
+  if \<not>rescaling then RETURN (\<B>, xs)
   else RETURN (\<B>, map_option (hp_rescale_weight \<beta>) xs)
   })\<close>
 
