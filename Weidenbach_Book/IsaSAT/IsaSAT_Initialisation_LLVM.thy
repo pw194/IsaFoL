@@ -175,103 +175,101 @@ abbreviation snat_rel32 :: \<open>(32 word \<times> nat) set\<close> where \<ope
 abbreviation snat_rel64 :: \<open>(64 word \<times> nat) set\<close> where \<open>snat_rel64 \<equiv> snat_rel\<close>
 
 
-sepref_def hp_init_ACIDS0_code
-  is \<open>uncurry hp_init_ACIDS0\<close>
+sepref_def hp_init_EVSIDS0_code
+  is \<open>uncurry hp_init_EVSIDS0\<close>
   :: \<open>(arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow>\<^sub>a hp_assn\<close>
-  unfolding hp_init_ACIDS0_def
-    array_fold_custom_replicate op_list_replicate_def[symmetric]
+  unfolding hp_init_EVSIDS0_def
+    op_list_replicate_def[symmetric]
     atom.fold_option hp_assn_def
-  apply (annot_unat_const \<open>TYPE(64)\<close>)
+  apply (rewrite in \<open>(_, _, _, _, \<hole>, _)\<close> larray_fold_custom_replicate)
+  unfolding array_fold_custom_replicate
   by sepref
 
 
-definition init_ACIDS0' :: \<open>_ \<Rightarrow> nat \<Rightarrow>  (nat multiset \<times> nat multiset \<times> (nat \<Rightarrow> nat)) nres\<close> where
-  \<open>init_ACIDS0' \<A> n = init_ACIDS0 (mset \<A>) n\<close>
+definition init_EVSIDS0' :: \<open>_ \<Rightarrow> nat \<Rightarrow>  (nat multiset \<times> nat multiset \<times> (nat \<Rightarrow> double\<^sub>p)) nres\<close> where
+  \<open>init_EVSIDS0' \<A> n = init_EVSIDS0 (mset \<A>) n\<close>
 
 
-lemma hp_acids_empty:
-  \<open>(uncurry hp_init_ACIDS0, uncurry init_ACIDS0') \<in> 
-   Id \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>((\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>nat_rel\<rangle>option_rel\<rangle>pairing_heaps_rel)) O
+lemma hp_evsids_empty:
+  \<open>(uncurry hp_init_EVSIDS0, uncurry init_EVSIDS0') \<in> 
+   Id \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>((\<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel)) O
    acids_encoded_hmrel\<rangle>nres_rel\<close>
 proof -
   have 1: \<open>((\<A>, (\<lambda>_. None, \<lambda>_. None, \<lambda>_. None, \<lambda>_. None, \<lambda>_. Some 0), None), (\<A>, {#}, \<lambda>_. 0)) \<in> acids_encoded_hmrel\<close> for \<A>
-    by (auto simp: acids_encoded_hmrel_def bottom_acids0_def pairing_heaps_rel_def map_fun_rel_def
-      ACIDS.hmrel_def encoded_hp_prop_list_conc_def encoded_hp_prop_def empty_outside_def empty_acids0_def
+    by (auto simp: acids_encoded_hmrel_def bottom_evsids0_def pairing_heaps_rel_def map_fun_rel_def
+      EVSIDS.hmrel_def encoded_hp_prop_list_conc_def encoded_hp_prop_def empty_outside_def empty_evsids0_def
       intro!: relcompI)
   have H: \<open>mset_nodes ya \<noteq> {#}\<close> for ya
     by (cases ya) auto
   show ?thesis
-    unfolding uncurry0_def hp_init_ACIDS0_def init_ACIDS0_def
-      init_ACIDS0'_def uncurry_def case_prod_beta
+    unfolding uncurry0_def hp_init_EVSIDS0_def init_EVSIDS0_def
+      init_EVSIDS0'_def uncurry_def case_prod_beta
     apply (intro frefI nres_relI)
     apply refine_rcg
     apply (rule relcompI[of])
     defer
     apply (rule 1)
-    by (auto simp add: acids_encoded_hmrel_def  encoded_hp_prop_def hp_init_ACIDS0_def
-      ACIDS.hmrel_def encoded_hp_prop_list_conc_def pairing_heaps_rel_def H map_fun_rel_def
+    by (auto simp add: acids_encoded_hmrel_def  encoded_hp_prop_def hp_init_EVSIDS0_def
+      EVSIDS.hmrel_def encoded_hp_prop_list_conc_def pairing_heaps_rel_def H map_fun_rel_def
       split: option.splits dest!: multi_member_split)
 qed
 
 lemmas [sepref_fr_rules] =
-  hp_init_ACIDS0_code.refine[FCOMP hp_acids_empty, unfolded hr_comp_assoc[symmetric]
-  acids_assn_def[symmetric]]
+  hp_init_EVSIDS0_code.refine[FCOMP hp_evsids_empty, unfolded hr_comp_assoc[symmetric]
+  evsids_assn_def[symmetric]]
 
 
-definition init_ACIDS' where
-  \<open>init_ACIDS' \<A> n = do {
-  ac \<leftarrow> init_ACIDS0' \<A> n;
-  RETURN (ac, 0)
+definition init_EVSIDS' where
+  \<open>init_EVSIDS' \<A> n = do {
+  vs \<leftarrow> init_EVSIDS0' \<A> n;
+  RETURN (vs, 1)
   }\<close>
 
-lemma init_ACIDS'_alt: \<open>init_ACIDS (mset N) n = init_ACIDS' N n\<close>
-  by (auto simp: init_ACIDS'_def init_ACIDS0'_def init_ACIDS_def)
+lemma init_EVSIDS'_alt: \<open>init_EVSIDS (mset N) n = init_EVSIDS' N n\<close>
+  by (auto simp: init_EVSIDS'_def init_EVSIDS0'_def init_EVSIDS_def)
 
-sepref_register init_ACIDS0' acids_heur_import_variable
+sepref_register init_EVSIDS0' evsids_heur_import_variable
 
-sepref_def hp_init_ACIDS_code
-  is \<open>uncurry init_ACIDS'\<close>
-  :: \<open>(arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow>\<^sub>a acids_assn2\<close>
-  unfolding init_ACIDS'_def acids_assn2_def
-  apply (annot_unat_const \<open>TYPE(64)\<close>)
+sepref_def hp_init_EVSIDS_code
+  is \<open>uncurry init_EVSIDS'\<close>
+  :: \<open>(arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow>\<^sub>a evsids_assn2\<close>
+  unfolding init_EVSIDS'_def evsids_assn2_def
   by sepref
 
 sepref_def acids_heur_import_variable_code
-  is \<open>uncurry acids_heur_import_variable\<close>
-  :: \<open>atom_assn\<^sup>k *\<^sub>a acids_assn2\<^sup>d \<rightarrow>\<^sub>a acids_assn2\<close>
-  unfolding acids_heur_import_variable_def acids_assn2_def
-  apply (annot_unat_const \<open>TYPE(64)\<close>)
+  is \<open>uncurry evsids_heur_import_variable\<close>
+  :: \<open>atom_assn\<^sup>k *\<^sub>a evsids_assn2\<^sup>d \<rightarrow>\<^sub>a evsids_assn2\<close>
+  unfolding evsids_heur_import_variable_def evsids_assn2_def
   by sepref
 
-sepref_def initialise_ACIDS_code
-  is \<open>uncurry initialise_ACIDS\<close>
-  :: \<open>[\<lambda>(N, n). True]\<^sub>a (arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow> acids_assn2\<close>
-  unfolding initialise_ACIDS_def vmtf_cons_def Suc_eq_plus1 atom.fold_option length_uint32_nat_def
-    option.case_eq_if vmtf_init_assn_def init_ACIDS'_alt
+sepref_def initialise_EVSIDS_code
+  is \<open>uncurry initialise_EVSIDS\<close>
+  :: \<open>[\<lambda>(N, n). True]\<^sub>a (arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow> evsids_assn2\<close>
+  unfolding initialise_EVSIDS_def vmtf_cons_def Suc_eq_plus1 atom.fold_option length_uint32_nat_def
+    option.case_eq_if vmtf_init_assn_def init_EVSIDS'_alt
   apply (annot_snat_const \<open>TYPE(64)\<close>)
   supply [[goals_limit = 1]]
   by sepref
 
-lemma initialise_ACIDS_rev_alt_def:
-  \<open>initialise_ACIDS_rev N n = do {
-   A \<leftarrow> init_ACIDS (mset N) n;
+lemma initialise_EVSIDS_rev_alt_def:
+  \<open>initialise_EVSIDS_rev N n = do {
+   A \<leftarrow> init_EVSIDS (mset N) n;
    ASSERT(length N \<le> unat32_max);
    (n, A) \<leftarrow> WHILE\<^sub>T\<^bsup> \<lambda>_. True\<^esup>
       (\<lambda>(i, A). i < length_uint32_nat N)
       (\<lambda>(i, A). do {
         ASSERT(i < length_uint32_nat N);
         let L = (N ! (length N - 1 - i));
-        ASSERT (snd A = i);
           ASSERT(i + 1 \<le> unat32_max);
-        A \<leftarrow> acids_heur_import_variable L A;
+        A \<leftarrow> evsids_heur_import_variable L A;
         RETURN (i + 1, A)
       })
       (0, A);
    RETURN A
   }\<close> (is \<open>?A = ?B\<close>)
 proof -
-  have [refine0]: \<open>init_ACIDS (mset (rev N)) n \<le> \<Down> Id (init_ACIDS (mset N) n)\<close>
-     \<open>init_ACIDS (mset (N)) n \<le> \<Down> Id (init_ACIDS (mset (rev N)) n)\<close>
+  have [refine0]: \<open>init_EVSIDS (mset (rev N)) n \<le> \<Down> Id (init_EVSIDS (mset N) n)\<close>
+     \<open>init_EVSIDS (mset (N)) n \<le> \<Down> Id (init_EVSIDS (mset (rev N)) n)\<close>
     by auto
   have [refine0]: \<open>(A,Aa)\<in>Id \<Longrightarrow> ((0, A), 0, Aa) \<in> Id \<times>\<^sub>r Id\<close> for A Aa
     by auto
@@ -283,13 +281,11 @@ proof -
     x = (x1a, x2a) \<Longrightarrow>
     x1 < length_uint32_nat N \<Longrightarrow>
     x1a < length_uint32_nat (rev N) \<Longrightarrow>
-    snd x2 = x1 \<Longrightarrow>
     x1 + 1 \<le> unat32_max \<Longrightarrow>
-    snd x2a = x1a \<Longrightarrow>
     x1a + 1 \<le> unat32_max \<Longrightarrow>
-    acids_heur_import_variable (rev N ! x1a) x2a
+    evsids_heur_import_variable (rev N ! x1a) x2a
     \<le> \<Down> Id
-      (acids_heur_import_variable (N ! (length N - 1 - x1)) x2)\<close>
+      (evsids_heur_import_variable (N ! (length N - 1 - x1)) x2)\<close>
       \<open>\<And>A Aa x x' x1 x2 x1a x2a.
     (x, x') \<in> nat_rel \<times>\<^sub>f Id \<Longrightarrow>
     case x of (i, A) \<Rightarrow> i < length_uint32_nat  N \<Longrightarrow>
@@ -298,23 +294,21 @@ proof -
     x = (x1a, x2a) \<Longrightarrow>
     x1 < length_uint32_nat N \<Longrightarrow>
     x1a < length_uint32_nat (rev N) \<Longrightarrow>
-    snd x2 = x1 \<Longrightarrow>
     x1 + 1 \<le> unat32_max \<Longrightarrow>
-    snd x2a = x1a \<Longrightarrow>
     x1a + 1 \<le> unat32_max \<Longrightarrow>
-    acids_heur_import_variable (N ! (length N - 1 - x1a)) x2a
+    evsids_heur_import_variable (N ! (length N - 1 - x1a)) x2a
     \<le> \<Down> Id
-    (acids_heur_import_variable (rev N ! x1) x2)\<close>
+    (evsids_heur_import_variable (rev N ! x1) x2)\<close>
     by (auto simp: nth_rev)
   have \<open>?A \<le> \<Down>Id ?B\<close>
-    unfolding initialise_ACIDS_rev_def initialise_ACIDS_def
+    unfolding initialise_EVSIDS_rev_def initialise_EVSIDS_def
     apply refine_vcg
     apply (auto simp: rev_nth; fail)+
     apply (rule K; assumption)
     apply (auto simp: rev_nth; fail)+
     done
   moreover have \<open>?B \<le> \<Down>Id ?A\<close>
-    unfolding initialise_ACIDS_rev_def initialise_ACIDS_def
+    unfolding initialise_EVSIDS_rev_def initialise_EVSIDS_def
     apply refine_vcg
     apply (auto simp: rev_nth; fail)+
     apply (rule K; assumption?)
@@ -324,11 +318,11 @@ proof -
     by auto
 qed
 
-sepref_def initialise_ACIDS_rev_code
-  is \<open>uncurry initialise_ACIDS_rev\<close>
-  :: \<open>[\<lambda>(N, n). True]\<^sub>a (arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow> acids_assn2\<close>
+sepref_def initialise_EVSIDS_rev_code
+  is \<open>uncurry initialise_EVSIDS_rev\<close>
+  :: \<open>[\<lambda>(N, n). True]\<^sub>a (arl64_assn atom_assn)\<^sup>k *\<^sub>a sint64_nat_assn\<^sup>k \<rightarrow> evsids_assn2\<close>
   unfolding vmtf_cons_def Suc_eq_plus1 atom.fold_option length_uint32_nat_def
-    option.case_eq_if vmtf_init_assn_def init_ACIDS'_alt initialise_ACIDS_rev_alt_def nth_rev
+    option.case_eq_if vmtf_init_assn_def init_EVSIDS'_alt initialise_EVSIDS_rev_alt_def nth_rev
   apply (annot_snat_const \<open>TYPE(64)\<close>)
   supply [[goals_limit = 1]]
   by sepref

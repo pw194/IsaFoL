@@ -290,7 +290,7 @@ lemma mop_hp_insert_impl_spec2:
 
 lemma mop_rescale_and_reroot_spec2:
    \<open>(uncurry2 mop_rescale_and_reroot, uncurry2 rescale_and_reroot) \<in>
-    nat_rel \<times>\<^sub>f Id \<times>\<^sub>f  \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
+    nat_rel \<times>\<^sub>f Id \<times>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<rightarrow>\<^sub>f
     \<langle>\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<rangle>nres_rel\<close>
   by (intro frefI nres_relI) (auto intro!: mop_rescale_and_reroot_spec[THEN order_trans])
 
@@ -357,6 +357,7 @@ lemmas [sepref_fr_rules] =
 
 sepref_register Pairing_Heaps_Impl.mop_imp_needs_rescaling
 
+(*TODO: This might be a duplicate, check EVSIDS_LLVM.thy*)
 sepref_def mop_imp_decreases_weights_pure_rescale_code
   is \<open>uncurry mop_imp_decreases_weights_only\<close>
   :: \<open>dpfloat_assn\<^sup>k *\<^sub>a (hp_assn)\<^sup>d \<rightarrow>\<^sub>a hp_assn\<close>

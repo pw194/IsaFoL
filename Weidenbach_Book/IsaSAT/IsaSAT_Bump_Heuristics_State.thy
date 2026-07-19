@@ -1,11 +1,11 @@
 theory IsaSAT_Bump_Heuristics_State
   imports Watched_Literals_VMTF
-    IsaSAT_ACIDS
+    IsaSAT_EVSIDS
   Tuple4
 begin
 
 (*TODO: share the to_remove part of Bump_Heuristics*)
-type_synonym bump_heuristics = \<open>((nat, nat) acids, vmtf, bool, nat list \<times> bool list) tuple4\<close>
+type_synonym bump_heuristics = \<open>((nat, double\<^sub>p) evsids, vmtf, bool, nat list \<times> bool list) tuple4\<close>
 
 abbreviation Bump_Heuristics :: \<open>_ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> _ \<Rightarrow> bump_heuristics\<close> where
   \<open>Bump_Heuristics a b c d \<equiv> Tuple4 a b c d\<close>
@@ -13,7 +13,7 @@ abbreviation Bump_Heuristics :: \<open>_ \<Rightarrow> _ \<Rightarrow> _ \<Right
 lemmas bump_heuristics_splits = Tuple4.tuple4.splits
 hide_fact tuple4.splits
 
-abbreviation get_stable_heuristics :: \<open>bump_heuristics \<Rightarrow> (nat, nat) acids\<close> where
+abbreviation get_stable_heuristics :: \<open>bump_heuristics \<Rightarrow> (nat, double\<^sub>p) evsids\<close> where
   \<open>get_stable_heuristics \<equiv> Tuple4_a\<close>
 
 abbreviation get_focused_heuristics :: \<open>bump_heuristics \<Rightarrow> vmtf\<close> where
@@ -28,7 +28,7 @@ abbreviation is_stable_heuristics:: \<open>bump_heuristics \<Rightarrow> bool\<c
 abbreviation get_bumped_variables :: \<open>bump_heuristics \<Rightarrow> nat list \<times> bool list\<close> where
   \<open>get_bumped_variables \<equiv> Tuple4_d\<close>
 
-abbreviation set_stable_heuristics :: \<open>(nat, nat) acids \<Rightarrow>bump_heuristics \<Rightarrow> _\<close> where
+abbreviation set_stable_heuristics :: \<open>(nat, double\<^sub>p) evsids \<Rightarrow>bump_heuristics \<Rightarrow> _\<close> where
   \<open>set_stable_heuristics \<equiv> Tuple4.set_a\<close>
 
 abbreviation set_focused_heuristics :: \<open>vmtf \<Rightarrow>bump_heuristics \<Rightarrow> _\<close> where
@@ -46,10 +46,10 @@ definition get_unit_trail where
 definition bump_heur :: \<open>_ \<Rightarrow> _ \<Rightarrow> bump_heuristics set\<close> where
   \<open>bump_heur \<A> M = {x.
     (is_focused_heuristics x \<longrightarrow>
-      (get_stable_heuristics x \<in> acids \<A> (get_unit_trail M)  \<and>
+      (get_stable_heuristics x \<in> evsids \<A> (get_unit_trail M)  \<and>
       get_focused_heuristics x \<in> vmtf \<A> M)) \<and>
     (\<not>is_focused_heuristics x \<longrightarrow>
-      (get_stable_heuristics x \<in> acids \<A> M \<and>
+      (get_stable_heuristics x \<in> evsids \<A> M \<and>
        get_focused_heuristics x \<in> vmtf \<A> (get_unit_trail M))) \<and>
    (get_bumped_variables x, set (fst (get_bumped_variables x))) \<in> distinct_atoms_rel \<A>
   }\<close>
@@ -76,11 +76,11 @@ subsection \<open>Access Function\<close>
 definition isa_bump_unset_pre where
   \<open>isa_bump_unset_pre = (\<lambda>L x.
   (is_focused_heuristics x \<longrightarrow> vmtf_unset_pre L (get_focused_heuristics x)) \<and>
-  (is_stable_heuristics x \<longrightarrow> acids_tl_pre L (get_stable_heuristics x))
+  (is_stable_heuristics x \<longrightarrow> evsids_tl_pre L (get_stable_heuristics x))
   )\<close>
 definition isa_bump_unset :: \<open>nat \<Rightarrow> bump_heuristics \<Rightarrow> bump_heuristics nres\<close> where
   \<open>isa_bump_unset L vm = (case vm of Tuple4 (hstable) (focused) foc a \<Rightarrow> do {
-  hstable \<leftarrow> (if \<not>foc then acids_tl L hstable else RETURN hstable);
+  hstable \<leftarrow> (if \<not>foc then evsids_tl L hstable else RETURN hstable);
   let focused = (if foc then vmtf_unset L focused else focused);
   RETURN (Tuple4 hstable focused foc a)
   })\<close>
@@ -103,7 +103,7 @@ lemma get_unit_trail_tl[simp]: \<open>count_decided M > 0 \<Longrightarrow> get_
 lemma isa_vmtf_consD:
   \<open>x \<in> bump_heur \<A> M \<Longrightarrow> x \<in> bump_heur \<A> (L # M)\<close>
   by (auto simp add: bump_heur_def takeWhile_append get_unit_trail_cons_if
-      intro!: vmtf_consD' acids_prepend)
+      intro!: vmtf_consD' evsids_prepend)
 
 
 lemma isa_bump_unset_vmtf_tl:
@@ -122,10 +122,10 @@ proof -
       assms unfolding isa_bump_unset_def apply (cases x, simp only: tuple4.case Let_def)
     apply (cases \<open>is_focused_heuristics x\<close>)
     subgoal
-      by (refine_vcg acids_tl[of _ \<A> M, THEN order_trans])
+      by (refine_vcg evsids_tl[of _ \<A> M, THEN order_trans])
        (auto simp: bump_heur_def isa_bump_unset_def split: bump_heuristics_splits)
     subgoal
-      by (refine_vcg acids_tl[of _ \<A> M, THEN order_trans])
+      by (refine_vcg evsids_tl[of _ \<A> M, THEN order_trans])
         (auto simp: bump_heur_def isa_bump_unset_def atms_of_\<L>\<^sub>a\<^sub>l\<^sub>l_\<A>\<^sub>i\<^sub>n split: bump_heuristics_splits)
     done
 qed

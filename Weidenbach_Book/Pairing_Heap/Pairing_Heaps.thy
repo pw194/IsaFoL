@@ -2820,16 +2820,6 @@ lemma mop_hm_decreases_weights_mop_prio_change_weights:
 
 end
 
-interpretation ACIDS: hmstruct_with_prio where
-  le = \<open>(\<ge>) :: nat \<Rightarrow> nat \<Rightarrow> bool\<close> and
-  lt = \<open>(>)\<close>
-  apply unfold_locales
-  subgoal by auto
-  subgoal by auto
-  subgoal by (auto simp: transp_def)
-  subgoal by (auto simp: totalp_on_def)
-  done
-
 interpretation EVSIDS: pairing_heap_assms2 where
   le = \<open>(\<ge>) :: double\<^sub>p \<Rightarrow> double\<^sub>p \<Rightarrow> bool\<close> and
   lt = \<open>(>)\<close>

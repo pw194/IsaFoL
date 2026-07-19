@@ -649,9 +649,9 @@ lemma vmtf_cong:
   by auto
 
 lemma acids_cong:
-  \<open>set_mset \<A> = set_mset \<B> \<Longrightarrow> L \<in> acids \<A> M \<Longrightarrow> L \<in> acids \<B> M\<close>
+  \<open>set_mset \<A> = set_mset \<B> \<Longrightarrow> L \<in> evsids \<A> M \<Longrightarrow> L \<in> evsids \<B> M\<close>
   using \<L>\<^sub>a\<^sub>l\<^sub>l_cong[of \<A> \<B>] atms_of_\<L>\<^sub>a\<^sub>l\<^sub>l_cong[of \<A> \<B>]
-  unfolding acids_def vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
+  unfolding evsids_def vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
   apply (auto simp: distinct_subseteq_iff)
   by (metis distinct_subseteq_iff)
 

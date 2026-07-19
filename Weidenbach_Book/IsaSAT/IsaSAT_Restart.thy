@@ -492,16 +492,16 @@ proof -
       vmtf (all_init_atms aaa ca) (get_unit_trail(ys @ Propagated x2 0 # zs))\<close>
       by (auto simp: vmtf_def  get_unit_trail_def takeWhile_append vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
 	image_iff)
-    moreover have \<open>acids (all_init_atms aaa ca) (get_unit_trail (ys @ Propagated x2 C # zs)) =
-      acids (all_init_atms aaa ca) (get_unit_trail(ys @ Propagated x2 0 # zs))\<close>
-      apply (auto simp: acids_def get_unit_trail_def takeWhile_append vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
+    moreover have \<open>evsids (all_init_atms aaa ca) (get_unit_trail (ys @ Propagated x2 C # zs)) =
+      evsids (all_init_atms aaa ca) (get_unit_trail(ys @ Propagated x2 0 # zs))\<close>
+      apply (auto simp: evsids_def get_unit_trail_def takeWhile_append vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
 	image_iff)
       apply (metis (no_types, lifting) map_lit_of_eq_defined_litD valid_trail_reduction_eq_alt_def
         valid_trail_reduction_eq_change_annot)+
       done
-    moreover have \<open>acids (all_init_atms aaa ca) ((ys @ Propagated x2 C # zs)) =
-      acids (all_init_atms aaa ca) ((ys @ Propagated x2 0 # zs))\<close>
-      apply (auto simp: acids_def get_unit_trail_def takeWhile_append vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
+    moreover have \<open>evsids (all_init_atms aaa ca) ((ys @ Propagated x2 C # zs)) =
+      evsids (all_init_atms aaa ca) ((ys @ Propagated x2 0 # zs))\<close>
+      apply (auto simp: evsids_def get_unit_trail_def takeWhile_append vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
 	image_iff)
       apply (metis (mono_tags, lifting) map_lit_of_eq_defined_litD valid_trail_reduction_eq_alt_def
         valid_trail_reduction_eq_change_annot)+

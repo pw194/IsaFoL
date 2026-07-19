@@ -3055,8 +3055,8 @@ lemma encoded_hp_prop_list_conc_update_outside:
     hp_update_score_def
     split: option.splits)
 
-definition ACIDS_decrease_key' where
-  \<open>ACIDS_decrease_key' = (\<lambda>a w (\<V>, h). (\<V>, EVSIDS.decrease_key a w (the h)))\<close>
+definition EVSIDS_decrease_key' where
+  \<open>EVSIDS_decrease_key' = (\<lambda>a w (\<V>, h). (\<V>, EVSIDS.decrease_key a w (the h)))\<close>
 
 lemma rescale_and_reroot:
   fixes h :: \<open>nat multiset \<times> (nat, double\<^sub>p)hp option\<close>
@@ -3070,7 +3070,7 @@ proof -
     using enc by (auto simp: encoded_hp_prop_list_conc_def split: option.splits)
   show ?thesis
     using assms
-    unfolding rescale_and_reroot_def EVSIDS.decrease_key_def ACIDS_decrease_key'_def
+    unfolding rescale_and_reroot_def EVSIDS.decrease_key_def EVSIDS_decrease_key'_def
       EVSIDS.mop_hm_decrease_key_def case_prod_beta[of _ h] prod.collapse
     apply (refine_vcg unroot_hp_tree vsids_merge_pairs)
     subgoal by (auto simp: encoded_hp_prop_list_conc_def split: option.splits)
@@ -3409,7 +3409,7 @@ lemma mop_hp_read_score_mop_prio_old_weight2:
 
 thm EVSIDS.mop_prio_insert_raw_unchanged_def
 thm EVSIDS.mop_prio_insert_maybe_def (*covered by EVSIDS.mop_prio_change_weight and EVSIDS.mop_prio_insert *)
-term EVSIDS.prio_peek_min (*TODO remove: unused as acids_get_min*)
+term EVSIDS.prio_peek_min (*TODO remove: unused as evsids_get_min*)
 thm EVSIDS.mop_prio_old_weight_def
 thm EVSIDS.mop_prio_insert_raw_unchanged_def
 term EVSIDS.mop_prio_insert_unchanged(*covered by the two previous ones*)

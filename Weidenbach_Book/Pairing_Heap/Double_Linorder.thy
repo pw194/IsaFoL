@@ -2,17 +2,13 @@ theory Double_Linorder
   imports Isabelle_LLVM.IICF Isabelle_LLVM.Float_Setup
 begin
 
-
-
 section \<open>EVSIDS doubles\<close>
-
 
 (* Note: The following subsection is a courtesy by Peter Lammich *)
 subsection \<open>Definitions and sepref setup\<close>
 
 definition is_positive_float :: \<open>('e,'f) float \<Rightarrow> bool\<close> where
   \<open>is_positive_float x \<longleftrightarrow> (sign x = 0) \<and> \<not>is_nan x\<close>
-
 
 typedef double\<^sub>p = \<open>{x::(11,52) float. is_positive_float x}\<close> 
   morphisms dp_to_float dp_from_float
@@ -84,8 +80,6 @@ sepref_register
   "1 :: double\<^sub>p"
   const_double\<^sub>p
   
-definition \<open>float\<^sub>p_rel = br id (\<lambda>x. is_positive_float x)\<close>
-
 definition "dpfloat_rel_aux \<equiv> br dp_from_float is_positive_float"
 
 definition "dpfloat_rel \<equiv> dfloat_rel O dpfloat_rel_aux"
@@ -368,7 +362,6 @@ lemma double_plus\<^sub>p_mono: \<open>(x::double\<^sub>p) \<le> x + y\<close>
   by transfer (rule float\<^sub>p_plus_mono)
 
 subsubsection \<open>Monotonicity lemmas (*)\<close>
-thm defloat_float_zerosign_round_finite
 lemma float\<^sub>p_fmul\<^sub>p_mono:
   fixes x y z :: \<open>('e::len2,'f) float\<close>
   assumes px: \<open>is_positive_float x\<close> and py: \<open>is_positive_float y\<close> and pz: \<open>is_positive_float z\<close> and x_le_y: \<open>x \<le> y\<close>

@@ -12,13 +12,13 @@ section \<open>Bumping\<close>
 
 thm isa_vmtf_find_next_undef_def
   term isa_acids_find_next_undef
-definition isa_acids_find_next_undef :: \<open>(nat, nat) acids \<Rightarrow> trail_pol \<Rightarrow> (nat option \<times> (nat, nat) acids) nres\<close> where
-\<open>isa_acids_find_next_undef = (\<lambda>ac M. do {
+definition isa_evsids_find_next_undef :: \<open>(nat, double\<^sub>p) evsids \<Rightarrow> trail_pol \<Rightarrow> (nat option \<times> (nat, double\<^sub>p) evsids) nres\<close> where
+\<open>isa_evsids_find_next_undef = (\<lambda>ac M. do {
   WHILE\<^sub>T\<^bsup>\<lambda>(L, ac). True\<^esup>
-      (\<lambda>(nxt, ac). nxt = None \<and> acids_mset ac \<noteq> {#})
+      (\<lambda>(nxt, ac). nxt = None \<and> evsids_mset ac \<noteq> {#})
       (\<lambda>(a, ac). do {
          ASSERT (a = None);
-         (L, ac) \<leftarrow> acids_pop_min ac;
+         (L, ac) \<leftarrow> evsids_pop_min ac;
          ASSERT (defined_atm_pol_pre M L);
          if defined_atm_pol M L then RETURN (None, ac)
          else RETURN (Some L, ac)
@@ -27,14 +27,14 @@ definition isa_acids_find_next_undef :: \<open>(nat, nat) acids \<Rightarrow> tr
       (None, ac)
   })\<close>
 
-lemma isa_acids_find_next_undef_acids_find_next_undef:
-  \<open>(uncurry isa_acids_find_next_undef, uncurry (acids_find_next_undef \<A>)) \<in>
+lemma isa_evsids_find_next_undef_evsids_find_next_undef:
+  \<open>(uncurry isa_evsids_find_next_undef, uncurry (evsids_find_next_undef \<A>)) \<in>
       Id \<times>\<^sub>r trail_pol \<A>  \<rightarrow>\<^sub>f \<langle>\<langle>nat_rel\<rangle>option_rel \<times>\<^sub>r Id\<rangle>nres_rel \<close>
 proof -
-  have [refine]: \<open>a=b\<Longrightarrow> acids_pop_min a \<le> \<Down> Id (acids_pop_min b)\<close>for a b
+  have [refine]: \<open>a=b\<Longrightarrow> evsids_pop_min a \<le> \<Down> Id (evsids_pop_min b)\<close>for a b
     by auto
   show ?thesis
-  unfolding isa_acids_find_next_undef_def acids_find_next_undef_def uncurry_def
+  unfolding isa_evsids_find_next_undef_def evsids_find_next_undef_def uncurry_def
     defined_atm_def[symmetric]
   apply (intro frefI nres_relI)
   apply refine_rcg
@@ -594,35 +594,35 @@ lemma isa_bump_unset_pre:
     \<open>L \<in># \<A>\<close>
   shows \<open>isa_bump_unset_pre L x\<close>
   using assms vmtf_unset_pre_vmtf[where \<A>=\<A> and M=M and L=L]
-    acids_tl[where  \<A>=\<A> and M=M and L=L]
+    evsids_tl[where  \<A>=\<A> and M=M and L=L]
   by (cases \<open>get_focused_heuristics x\<close>)
-    (auto simp: isa_bump_unset_pre_def bump_heur_def acids_tl_pre_def
-      atms_of_\<L>\<^sub>a\<^sub>l\<^sub>l_\<A>\<^sub>i\<^sub>n acids_def)
+    (auto simp: isa_bump_unset_pre_def bump_heur_def evsids_tl_pre_def
+      atms_of_\<L>\<^sub>a\<^sub>l\<^sub>l_\<A>\<^sub>i\<^sub>n evsids_def)
 
-definition isa_acids_flush_int :: \<open>trail_pol \<Rightarrow> (nat, nat)acids \<Rightarrow> _ \<Rightarrow> ((nat, nat)acids \<times> _) nres\<close> where
-\<open>isa_acids_flush_int  = (\<lambda>M vm (to_remove, h). do {
+definition isa_evsids_flush_int :: \<open>trail_pol \<Rightarrow> (nat, double\<^sub>p)evsids \<Rightarrow> _ \<Rightarrow> ((nat, double\<^sub>p)evsids \<times> _) nres\<close> where
+\<open>isa_evsids_flush_int  = (\<lambda>M vm (to_remove, h). do {
     ASSERT(length to_remove \<le> unat32_max);
     (_, vm, h) \<leftarrow> WHILE\<^sub>T\<^bsup>\<lambda>(i, vm', h). i \<le> length to_remove\<^esup>
       (\<lambda>(i, vm, h). i < length to_remove)
       (\<lambda>(i, vm, h). do {
          ASSERT(i < length to_remove);
-         vm \<leftarrow> acids_push_literal (to_remove!i) vm;
+         vm \<leftarrow> evsids_push_literal (to_remove!i) vm;
 	 ASSERT(atoms_hash_del_pre (to_remove!i) h);
          RETURN (i+1, vm, atoms_hash_del (to_remove!i) h)})
       (0, vm, h);
     RETURN (vm, (emptied_list to_remove, h))
   })\<close>
 
-lemma isa_acids_flush_int:
-  \<open>(uncurry2 isa_acids_flush_int, uncurry2 (acids_flush_int \<A>)) \<in> trail_pol (\<A>::nat multiset) \<times>\<^sub>f Id \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>Id\<times>\<^sub>f Id\<rangle>nres_rel\<close>
+lemma isa_evsids_flush_int:
+  \<open>(uncurry2 isa_evsids_flush_int, uncurry2 (evsids_flush_int \<A>)) \<in> trail_pol (\<A>::nat multiset) \<times>\<^sub>f Id \<times>\<^sub>f Id \<rightarrow>\<^sub>f \<langle>Id\<times>\<^sub>f Id\<rangle>nres_rel\<close>
 proof -
-  have [refine]: \<open>x2c=x2 \<Longrightarrow> x2e=x2b \<Longrightarrow> ((0, x2c::(nat, nat)acids, x2e), 0, x2, x2b) \<in> nat_rel \<times>\<^sub>r Id \<times>\<^sub>r Id\<close>
+  have [refine]: \<open>x2c=x2 \<Longrightarrow> x2e=x2b \<Longrightarrow> ((0, x2c::(nat, double\<^sub>p)evsids, x2e), 0, x2, x2b) \<in> nat_rel \<times>\<^sub>r Id \<times>\<^sub>r Id\<close>
     for x2c x2 x2e x2b
     by auto
-  have [refine]: \<open>(a,a')\<in>Id\<Longrightarrow>(b,b')\<in>Id \<Longrightarrow> acids_push_literal a b \<le>\<Down>Id (acids_push_literal a' b')\<close> for a a' b b'
+  have [refine]: \<open>(a,a')\<in>Id\<Longrightarrow>(b,b')\<in>Id \<Longrightarrow> evsids_push_literal a b \<le>\<Down>Id (evsids_push_literal a' b')\<close> for a a' b b'
     by auto
   show ?thesis
-    unfolding isa_acids_flush_int_def acids_flush_int_def uncurry_def
+    unfolding isa_evsids_flush_int_def evsids_flush_int_def uncurry_def
     apply (intro frefI nres_relI)
     apply refine_vcg
     subgoal by auto
@@ -640,19 +640,25 @@ proof -
 qed
 
 
-definition isa_acids_incr_score :: \<open>(nat, nat)acids \<Rightarrow> (nat, nat)acids\<close> where
+(*definition isa_acids_incr_score :: \<open>(nat, nat)acids \<Rightarrow> (nat, nat)acids\<close> where
   \<open>isa_acids_incr_score = (\<lambda>(a, m). (a, if m < unat64_max then m+1 else m))\<close>
 
 lemma isa_acids_incr_score: \<open>ac \<in> acids \<A> M \<Longrightarrow> isa_acids_incr_score ac \<in> acids \<A> M\<close>
-  by (auto simp: isa_acids_incr_score_def acids_def)
+  by (auto simp: isa_acids_incr_score_def acids_def)*)
 
+(*OLD
 definition isa_bump_heur_flush where
   \<open>isa_bump_heur_flush M x = (case x of Tuple4 stabl focused foc bumped \<Rightarrow> do {
   (stable, bumped) \<leftarrow> (if foc then RETURN (stabl, bumped) else isa_acids_flush_int M (isa_acids_incr_score stabl) bumped);
   (focused, bumped) \<leftarrow> (if \<not>foc then RETURN (focused, bumped) else isa_vmtf_flush_int M focused bumped);
   RETURN (Tuple4 stable focused foc bumped)})\<close>
+*)
 
-
+definition isa_bump_heur_flush where
+  \<open>isa_bump_heur_flush M x = (case x of Tuple4 stabl focused foc bumped \<Rightarrow> do {
+  (stable, bumped) \<leftarrow> (if foc then RETURN (stabl, bumped) else do {stabl \<leftarrow> evsids_decay stabl; isa_evsids_flush_int M stabl bumped});
+  (focused, bumped) \<leftarrow> (if \<not>foc then RETURN (focused, bumped) else isa_vmtf_flush_int M focused bumped);
+  RETURN (Tuple4 stable focused foc bumped)})\<close>
 
 definition isa_bump_flush
    :: \<open>nat multiset \<Rightarrow> (nat,nat) ann_lits \<Rightarrow>  bump_heuristics \<Rightarrow> (bump_heuristics) nres\<close>
@@ -665,19 +671,19 @@ lemma in_distinct_atoms_rel_in_atmsD: \<open>(ba, y) \<in> distinct_atoms_rel \<
     ((ae, baa), set ae) \<in> distinct_atoms_rel \<A>\<close>
   by (auto simp: distinct_atoms_rel_def distinct_hash_atoms_rel_def)
 
-lemma acids_change_to_remove_order':
-  \<open>(uncurry2 (acids_flush_int \<A>\<^sub>i\<^sub>n), uncurry2 (acids_flush \<A>\<^sub>i\<^sub>n)) \<in>
-   [\<lambda>((M, vm), to_r). vm \<in> acids \<A>\<^sub>i\<^sub>n M \<and> isasat_input_bounded \<A>\<^sub>i\<^sub>n \<and> isasat_input_nempty \<A>\<^sub>i\<^sub>n \<and> to_r \<subseteq> set_mset \<A>\<^sub>i\<^sub>n]\<^sub>f
+lemma evsids_change_to_remove_order':
+  \<open>(uncurry2 (evsids_flush_int \<A>\<^sub>i\<^sub>n), uncurry2 (evsids_flush \<A>\<^sub>i\<^sub>n)) \<in>
+   [\<lambda>((M, vm), to_r). vm \<in> evsids \<A>\<^sub>i\<^sub>n M \<and> isasat_input_bounded \<A>\<^sub>i\<^sub>n \<and> isasat_input_nempty \<A>\<^sub>i\<^sub>n \<and> to_r \<subseteq> set_mset \<A>\<^sub>i\<^sub>n]\<^sub>f
      Id \<times>\<^sub>f Id \<times>\<^sub>f distinct_atoms_rel \<A>\<^sub>i\<^sub>n \<rightarrow> \<langle>(Id \<times>\<^sub>r distinct_atoms_rel \<A>\<^sub>i\<^sub>n)\<rangle> nres_rel\<close>
   by (intro frefI nres_relI)
-    (use in \<open>auto intro!: acids_change_to_remove_order\<close>)
+    (use in \<open>auto intro!: evsids_change_to_remove_order\<close>)
 
 lemma isa_bump_heur_flush_isa_bump_flush:
   \<open>(uncurry (isa_bump_heur_flush), uncurry (isa_bump_flush \<A>))
 \<in> [\<lambda>(M, vm). vm \<in> bump_heur \<A> M \<and> isasat_input_bounded \<A> \<and>
   isasat_input_nempty \<A>]\<^sub>f trail_pol \<A> \<times>\<^sub>f Id \<rightarrow> \<langle>Id\<rangle>nres_rel\<close>
   unfolding isa_bump_heur_flush_def isa_bump_flush_def uncurry_def
-  apply (intro frefI nres_relI)
+ apply (intro frefI nres_relI)
   apply (case_tac x, case_tac \<open>snd x\<close>, simp only: snd_conv case_prod_beta tuple4.case)
   apply refine_vcg
   subgoal by fast
@@ -696,18 +702,27 @@ lemma isa_bump_heur_flush_isa_bump_flush:
       dest: in_distinct_atoms_rel_in_atmsD
       )
     done
-  subgoal for x y a b x1 x2 x3 x4
+subgoal for x y a b x1 x2 x3 x4
     apply (cases y)
     apply (auto split: bump_heuristics_splits simp: bump_heur_def vmtf_flush_def
       conc_fun_RES distinct_atoms_rel_emptiedI
-      intro!: isa_acids_flush_int[where \<A>=\<A>, THEN fref_to_Down_curry2, of _ _ _ , THEN order_trans]
-      acids_change_to_remove_order'[THEN fref_to_Down_curry2, of \<A> \<open>fst y\<close>, THEN order_trans]
-      dest!: isa_acids_incr_score[of x1]
-      dest: in_distinct_atoms_rel_in_atmsD
-      )
-    apply (auto split: bump_heuristics_splits simp: bump_heur_def acids_flush_def
-      conc_fun_RES distinct_atoms_rel_emptiedI
+      intro!: isa_evsids_flush_int[where \<A>=\<A>, THEN fref_to_Down_curry2, of _ _ _ , THEN order_trans]
+      evsids_change_to_remove_order'[THEN fref_to_Down_curry2, of \<A> \<open>fst y\<close>, THEN order_trans]
       dest: in_distinct_atoms_rel_in_atmsD)
+    apply (rule order_trans[OF evsids_decay])
+     apply assumption
+    apply refine_vcg
+    apply (auto split: bump_heuristics_splits simp: bump_heur_def evsids_flush_def
+      conc_fun_RES distinct_atoms_rel_emptiedI
+      intro!: isa_evsids_flush_int[where \<A>=\<A>, THEN fref_to_Down_curry2, of _ _ _ , THEN order_trans]
+      evsids_change_to_remove_order'[THEN fref_to_Down_curry2, of \<A> \<open>fst y\<close>, THEN order_trans]
+      dest: in_distinct_atoms_rel_in_atmsD)
+    prefer 3
+    apply (rule refl)
+    apply assumption
+    prefer 2
+    apply assumption
+    apply (auto dest: in_distinct_atoms_rel_in_atmsD)
     done
   done
 

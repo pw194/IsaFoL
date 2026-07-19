@@ -63,8 +63,8 @@ session "IsaSAT" (Weidenbach_Book) = "Watched_Literals"  +
     IsaSAT_Propagate_Conflict
     IsaSAT_Propagate_Conflict_LLVM
 
-    IsaSAT_ACIDS
-    IsaSAT_ACIDS_LLVM
+    IsaSAT_EVSIDS
+    IsaSAT_EVSIDS_LLVM
     IsaSAT_Bump_Heuristics_State
     IsaSAT_Bump_Heuristics
     IsaSAT_Decide_Defs

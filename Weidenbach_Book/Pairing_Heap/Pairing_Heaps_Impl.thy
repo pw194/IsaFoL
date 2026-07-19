@@ -401,7 +401,6 @@ private lemma in_pairing_heaps_rel_still: \<open>(arra, arr') \<in> \<langle>\<l
     (arra, arr'') \<in> \<langle>\<langle>nat_rel\<rangle>option_rel, \<langle>S\<rangle>option_rel\<rangle>pairing_heaps_rel\<close>
   by auto
 
-
 lemma mop_hp_insert_impl_spec:
   fixes w::\<open>('v::linorder)\<close>
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> \<open>(i,j)\<in>nat_rel\<close> \<open>(w,w')\<in>Id\<close>
@@ -653,7 +652,7 @@ lemma maybe_mop_hp_update_child'_imp_spec:
   unfolding maybe_mop_hp_update_child'_imp_def maybe_hp_update_child'_def
   by (refine_vcg mop_hp_update_child'_imp_spec) auto
 
-definition mop_hp_link_imp  :: \<open>nat \<Rightarrow>nat \<Rightarrow>(nat, 'b::order)pairing_heaps_imp \<Rightarrow> _ nres\<close> where
+definition mop_hp_link_imp  :: \<open>nat \<Rightarrow>nat \<Rightarrow>(nat, 'b::ord)pairing_heaps_imp \<Rightarrow> _ nres\<close> where
    \<open>mop_hp_link_imp = (\<lambda>i j arr. do {
     ASSERT (i \<noteq> j);
     x \<leftarrow> mop_hp_read_score_imp i arr;
@@ -672,7 +671,6 @@ definition mop_hp_link_imp  :: \<open>nat \<Rightarrow>nat \<Rightarrow>(nat, 'b
     RETURN (arr, parent)
       })\<close>
 
-(*TODO*)
 lemma mop_hp_link_imp_spec:
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> \<open>(i,j)\<in>nat_rel\<close> \<open>(w,w')\<in>nat_rel\<close>
   shows \<open>mop_hp_link_imp i w xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel \<times>\<^sub>r nat_rel) (hp_link j w' ys)\<close>
@@ -793,7 +791,7 @@ proof -
     done
 qed
 
-definition mop_vsids_pass\<^sub>1_imp :: \<open>(nat, 'b::order)pairing_heaps_imp \<Rightarrow> nat \<Rightarrow> _ nres\<close> where
+definition mop_vsids_pass\<^sub>1_imp :: \<open>(nat, 'b::ord)pairing_heaps_imp \<Rightarrow> nat \<Rightarrow> _ nres\<close> where
   \<open>mop_vsids_pass\<^sub>1_imp = (\<lambda>arr j. do {
   (arr, j, n) \<leftarrow> WHILE\<^sub>T(\<lambda>(arr, j, _). j \<noteq> None)
   (\<lambda>(arr, j, n). do {
@@ -1379,6 +1377,7 @@ definition mop_imp_decreases_weights_only
      RETURN (prevs', nxts', children', parents', scores', h')
   })\<close>
 
+(*TODO: This wrapper here is not needed and does the wrong thing for evsids*)
 definition mop_imp_decreases_weights :: \<open>double\<^sub>p \<Rightarrow> ('a,double\<^sub>p)pairing_heaps_imp \<Rightarrow> (('a,double\<^sub>p)pairing_heaps_imp) nres\<close> where
  \<open>mop_imp_decreases_weights \<beta> = (\<lambda>h. do {
    rescaling \<leftarrow> mop_imp_needs_rescaling h \<beta>;
@@ -1394,6 +1393,7 @@ definition mop_hp_decreases_weights_only :: \<open>'c :: {zero,ord,times} \<Righ
       RETURN ((\<V>, (prevs, nxts, childs, parents,  \<lambda>x. map_option (\<lambda>x. \<beta> * x) (scores x)), h))
   })\<close>
 
+(*TODO: not sure if needed*)
 definition mop_hp_decreases_weights :: \<open>'c :: {zero,ord,times} \<Rightarrow> (nat multiset \<times> (nat,'c) hp_fun \<times> nat option) \<Rightarrow> ((nat multiset \<times> (nat,'c) hp_fun \<times> nat option)) nres\<close> where
   \<open>mop_hp_decreases_weights \<beta> = (\<lambda>(\<V>, (prevs, nxts, childs, parents, scores), h). do {
     rescaling \<leftarrow> mop_hp_needs_rescaling ((\<V>, (prevs, nxts, childs, parents, scores), h));

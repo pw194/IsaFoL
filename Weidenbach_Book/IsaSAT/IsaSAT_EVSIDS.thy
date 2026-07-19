@@ -9,7 +9,7 @@ section \<open>EVSIDS\<close>
 
 type_synonym ('a, 'v) evsids = \<open>('a multiset \<times> 'a multiset \<times> ('a \<Rightarrow> 'v)) \<times> 'v\<close>
 
-(*Todo: missing invariant (inc \<le> evsids_limit) \<and> (\<forall>L\<in>#\<A>. w L \<le> evsids_limit)*)
+(*Todo: Maybe add invariant (inc \<le> evsids_limit) \<and> (\<forall>L\<in>#\<A>. w L \<le> evsids_limit)*)
 definition evsids :: \<open>'a multiset \<Rightarrow> ('a, 'ann) ann_lits \<Rightarrow> ('a, double\<^sub>p) evsids set\<close> where
 \<open>evsids \<A> M = {((\<B>, b, w), inc). set_mset \<B> = set_mset \<A> \<and> b \<subseteq># \<A> \<and> (\<forall>L \<in>#\<A>. L \<notin># b \<longrightarrow> defined_lit M (Pos L)) \<and> distinct_mset b}\<close>
 
@@ -148,18 +148,6 @@ qed
 definition evsids_push_literal_pre where
   \<open>evsids_push_literal_pre \<A> L = (\<lambda>vs. L \<in># \<A>)\<close>
 
-(*
-definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_max :: \<open>_ \<Rightarrow>_ \<Rightarrow> _\<close> where
-\<open>mop_hm_change_all_weights_with_max = (\<lambda>old ((\<A>, \<B>, w), m). do {
-  ASSERT ((\<forall>x\<in>#\<B>. w x \<le> m));
-  rescaling \<leftarrow> SPEC (\<lambda>_. True);
-  if ~rescaling then RETURN ((\<A>, \<B>, w), m)
-  else do {
-     w' \<leftarrow> RES UNIV; 
-     m \<leftarrow> SPEC (\<lambda>m. (\<forall>x\<in>#\<B>. w' x \<le> m) \<and> m \<ge> 0);
-    RETURN ((\<A>, \<B>, w'), m)
-  }})\<close>
-*)
 
 definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_inc :: \<open>_ \<Rightarrow>_ \<Rightarrow> _\<close> where
 \<open>mop_hm_change_all_weights_with_inc = (\<lambda>old ((\<A>, \<B>, w), inc). do {
@@ -171,23 +159,6 @@ definition (in hmstruct_with_prio) mop_hm_change_all_weights_with_inc :: \<open>
     RETURN ((\<A>, \<B>, w'), inc')
   }})\<close>
 
-(*
-definition acids_push_literal :: \<open>'a \<Rightarrow> ('a, nat) acids \<Rightarrow> ('a, nat) acids nres\<close> where
-  \<open>acids_push_literal L = (\<lambda>(ac, m). do {
-  ASSERT (L \<in># fst ac);
-  w \<leftarrow> ACIDS.mop_prio_old_weight L ac;
-  (ac, m) \<leftarrow> ACIDS.mop_hm_change_all_weights_with_max (2^40::nat) (ac, m);
-  w \<leftarrow> ACIDS.mop_prio_old_weight L ac;
-  let w = min m w;
-  ASSERT (w \<le> m);
-  ASSERT ((m - w) div 2 \<le> m);
-  let w = m - ((m - w) div 2);
-  ac \<leftarrow> ACIDS.mop_prio_insert_maybe L w ac;
-  RETURN (ac, m)
-  })\<close>
-
-*)
-
 definition evsids_push_literal :: \<open>'a \<Rightarrow> ('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids nres\<close> where
   \<open>evsids_push_literal L = (\<lambda>(vs, inc). do {
   ASSERT (L \<in># fst vs);
@@ -198,20 +169,6 @@ definition evsids_push_literal :: \<open>'a \<Rightarrow> ('a, double\<^sub>p) e
   vs \<leftarrow> EVSIDS.mop_prio_insert_maybe L w vs;
   RETURN (vs, inc)
   })\<close>
-
-(*
-Pseudo:
-  1. Obtain old lit score
-  2. compute score' = score + inc
-  3. If score' > limit
-    THEN: rescale
-          recompute score'
-          push score'
-          return
-    ELSE:
-          push score'
-          return
-*)
 
 lemma (in hmstruct_with_prio)mop_prio_change_all_weights_SPEC:
    \<open>vs' \<in> evsids \<A> M \<Longrightarrow> vs = vs'\<Longrightarrow> mop_hm_change_all_weights_with_inc w vs \<le> SPEC (\<lambda>vs. vs \<in> evsids \<A> M)\<close>
@@ -286,7 +243,6 @@ lemma evsids_push_literal:
     dest: subset_add_mset_notin_subset)
   done
 
-(*Todo: decay operation*)
 definition evsids_decay :: \<open>('a, double\<^sub>p) evsids \<Rightarrow> ('a, double\<^sub>p) evsids nres\<close> where
   \<open>evsids_decay = (\<lambda>(vs, inc). do {
     ASSERT (dpmul_pre evsids_decay_factor inc);
@@ -308,7 +264,6 @@ lemma evsids_decay:
     by (auto simp: dpmul_pre_def)
   subgoal by (auto simp: evsids_def)
   done
-(* End: decay operation*)
 
 definition evsids_flush_int :: \<open>nat multiset \<Rightarrow> (nat,nat) ann_lits \<Rightarrow> (nat, double\<^sub>p) evsids \<Rightarrow> _ \<Rightarrow> ((nat, double\<^sub>p) evsids \<times> _)nres\<close> where
 \<open>evsids_flush_int \<A>\<^sub>i\<^sub>n = (\<lambda>M vm (to_remove, h). do {
@@ -361,7 +316,7 @@ proof -
       using simple_clss_size_upper_div2[OF bounded lits dist tauto]
       by (auto simp: unat32_max_def)
   qed
-  have acids_push_literal_pre: \<open>evsids_push_literal_pre \<A>\<^sub>i\<^sub>n (C ! i) vs\<close>
+  have evsids_push_literal_pre: \<open>evsids_push_literal_pre \<A>\<^sub>i\<^sub>n (C ! i) vs\<close>
     if \<open>i < length C\<close> for i
     using t that CD_rem unfolding evsids_push_literal_pre_def distinct_atoms_rel_def
       distinct_hash_atoms_rel_def by auto
@@ -376,7 +331,7 @@ proof -
 
   let ?R = \<open>measure (\<lambda>(i, vm', h). length C - i)\<close>
 
-  have I_inv1_acids_push_literal_pre: \<open>I s \<Longrightarrow>
+  have I_inv1_evsids_push_literal_pre: \<open>I s \<Longrightarrow>
     fst (C, D) ! fst s \<in># \<A>\<^sub>i\<^sub>n \<Longrightarrow>
     x \<in> evsids \<A>\<^sub>i\<^sub>n M \<Longrightarrow>
     fst (fst s + 1, x,
@@ -413,14 +368,14 @@ proof -
     subgoal by (rule length_le)
     subgoal by auto
     subgoal by auto
-    subgoal by (auto intro!: acids_push_literal_pre)
+    subgoal by (auto intro!: evsids_push_literal_pre)
     subgoal using assms by (auto simp: I_def)
     subgoal by (rule sin)
     subgoal by (rule atms)
     subgoal by (auto simp: I_def)
     subgoal by auto
     subgoal by auto
-    subgoal for s x by (rule I_inv1_acids_push_literal_pre)
+    subgoal for s x by (rule I_inv1_evsids_push_literal_pre)
     subgoal by (rule I_Suc)
     subgoal for s x by (auto simp: I_def)
     subgoal by (auto simp: emptied_list_def conc_fun_RES I_def)

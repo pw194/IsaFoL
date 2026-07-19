@@ -2,17 +2,17 @@ theory IsaSAT_Bump_Heuristics_State_LLVM
   imports IsaSAT_Bump_Heuristics_State
     IsaSAT_VMTF_Setup_LLVM
     Tuple4_LLVM
-    IsaSAT_ACIDS_LLVM
+    IsaSAT_EVSIDS_LLVM
 begin
 hide_const (open) NEMonad.ASSERT NEMonad.RETURN
 
 type_synonym bump_heuristics_assn = \<open>
-  ((32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 64 word ptr \<times> 32 word) \<times> 64 word,
+  ((32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> 32 word ptr \<times> (64 word \<times> double ptr) \<times> 32 word) \<times> double,
      (64 word \<times> 32 word \<times> 32 word) ptr \<times> 64 word \<times> 32 word \<times> 32 word \<times> 32 word,
      1 word, (64 word \<times> 64 word \<times> 32 word ptr) \<times> 1 word ptr) tuple4\<close>
 
 definition heuristic_bump_assn :: \<open>bump_heuristics \<Rightarrow> bump_heuristics_assn \<Rightarrow> _\<close> where
-  \<open>heuristic_bump_assn = tuple4_assn acids_assn2 vmtf_assn bool1_assn distinct_atoms_assn\<close>
+  \<open>heuristic_bump_assn = tuple4_assn evsids_assn2 vmtf_assn bool1_assn distinct_atoms_assn\<close>
 
 definition bottom_atom where
   \<open>bottom_atom = 0\<close>
@@ -22,7 +22,7 @@ definition bottom_vmtf :: \<open>vmtf\<close> where
 
 
 definition extract_bump_stable where
-  \<open>extract_bump_stable = tuple4_state_ops.remove_a empty_acids\<close>
+  \<open>extract_bump_stable = tuple4_state_ops.remove_a empty_evsids\<close>
 definition extract_bump_focused where
   \<open>extract_bump_focused = tuple4_state_ops.remove_b bottom_vmtf\<close>
 
@@ -111,13 +111,13 @@ lemma free_distinct_atoms_assn2: \<open>MK_FREE (distinct_atoms_assn) free_atms_
     (auto intro!: ext)
 
 global_interpretation Bump_Heur: tuple4_state where
-  a_assn = acids_assn2 and
+  a_assn = evsids_assn2 and
   b_assn = vmtf_assn and
   c_assn = bool1_assn and
   d_assn = distinct_atoms_assn and
-  a_default = empty_acids and
-  a = \<open>empty_acids_code\<close> and
-  a_free = free_acids and
+  a_default = empty_evsids and
+  a = \<open>empty_evsids_code\<close> and
+  a_free = free_evsids and
   b_default = bottom_vmtf and
   b = \<open>bottom_vmtf_code\<close> and
   b_free = free_vmtf_remove and
@@ -134,8 +134,8 @@ global_interpretation Bump_Heur: tuple4_state where
   \<open>Bump_Heur.remove_c \<equiv> extract_bump_is_focused\<close> and
   \<open>Bump_Heur.remove_d \<equiv> extract_bump_atms_to_bump\<close>
   apply unfold_locales
-  apply (rule bottom_vmtf_code.refine bottom_focused.refine empty_acids_code.refine
-    bottom_atms_hash_code.refine free_vmtf_assn_assn2 free_focused_assn2 free_acids_assn2'
+  apply (rule bottom_vmtf_code.refine bottom_focused.refine empty_evsids_code.refine
+    bottom_atms_hash_code.refine free_vmtf_assn_assn2 free_focused_assn2 free_evsids_assn2'
     free_distinct_atoms_assn2)+
   subgoal unfolding heuristic_bump_assn_def tuple4_state_ops.tuple4_int_assn_def by auto
   subgoal unfolding extract_bump_stable_def by auto

@@ -174,7 +174,7 @@ lemma [sepref_fr_rules]: \<open>(uncurry0 (Mreturn 0), uncurry0 (RETURN bottom_a
   by (smt (verit, best) pure_true_conv rel_simps(51) sep.add_0)
 
 definition bottom_bump :: \<open>bump_heuristics\<close> where
-  \<open>bottom_bump = Tuple4 empty_acids bottom_vmtf False bottom_atms_hash\<close>
+  \<open>bottom_bump = Tuple4 empty_evsids bottom_vmtf False bottom_atms_hash\<close>
 
 definition extract_vmtf_wl_heur where
   \<open>extract_vmtf_wl_heur = isasat_state_ops.remove_f bottom_bump\<close>

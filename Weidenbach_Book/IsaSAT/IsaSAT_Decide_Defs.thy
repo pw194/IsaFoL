@@ -11,7 +11,7 @@ definition isa_bump_find_next_undef where \<open>
     L \<leftarrow> isa_vmtf_find_next_undef focused M;
     RETURN (L, Bump_Heuristics hstable (update_next_search L focused) foc tobmp)
     } else  do {
-    (L, hstable) \<leftarrow> isa_acids_find_next_undef hstable M;
+    (L, hstable) \<leftarrow> isa_evsids_find_next_undef hstable M;
     RETURN (L, Bump_Heuristics hstable focused foc tobmp)
   })\<close>
 

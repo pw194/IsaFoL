@@ -12,7 +12,7 @@ definition bump_find_next_undef where \<open>
     L \<leftarrow> vmtf_find_next_undef \<A> focused M;
     RETURN (L, Bump_Heuristics hstable (update_next_search L focused) foc tobmp)
     } else  do {
-    (L, hstable) \<leftarrow> acids_find_next_undef \<A> hstable M;
+    (L, hstable) \<leftarrow> evsids_find_next_undef \<A> hstable M;
     RETURN (L, Bump_Heuristics hstable focused foc tobmp)
   })\<close>
 
@@ -34,7 +34,7 @@ lemma isa_bump_find_next_undef_bump_find_next_undef:
   apply (intro frefI nres_relI)
   apply (case_tac \<open>x\<close>, case_tac \<open>fst x\<close>,  case_tac \<open>y\<close>, case_tac \<open>fst y\<close>, hypsubst, clarsimp simp only: fst_conv tuple4.case)
   apply (refine_rcg isa_vmtf_find_next_undef_vmtf_find_next_undef[THEN fref_to_Down_curry]
-    isa_acids_find_next_undef_acids_find_next_undef[THEN fref_to_Down_curry])
+    isa_evsids_find_next_undef_acids_find_next_undef[THEN fref_to_Down_curry])
   subgoal by auto
   subgoal by auto
   subgoal by auto
@@ -70,7 +70,7 @@ lemma bump_find_next_undef_ref:
   apply (cases x, simp only: tuple4.case)
   by (refine_vcg lhs_step_If)
    (auto intro!: vmtf_find_next_undef_ref[THEN order_trans]
-      acids_find_next_undef[THEN order_trans] dest: vmtf_consD
+      evsids_find_next_undef[THEN order_trans] dest: vmtf_consD
     simp: bump_heur_def update_next_search_def)
 
 definition find_undefined_atm
@@ -294,9 +294,9 @@ proof -
     \<open>vmtf \<A> (Decided (-ap) # aa) = vmtf \<A> (Decided ap # aa)\<close> for \<A> ap aa
     unfolding vmtf_def vmtf_\<L>\<^sub>a\<^sub>l\<^sub>l_def
     by auto
-  have [simp]: \<open>acids \<A> (Decided (Pos (atm_of ap)) # aa) = acids \<A> (Decided ap # aa)\<close>
-    \<open>acids \<A> (Decided (-ap) # aa) = acids \<A> (Decided ap # aa)\<close> for \<A> ap aa
-    unfolding acids_def defined_lit_map
+  have [simp]: \<open>evsids \<A> (Decided (Pos (atm_of ap)) # aa) = evsids \<A> (Decided ap # aa)\<close>
+    \<open>evsids \<A> (Decided (-ap) # aa) = evsids \<A> (Decided ap # aa)\<close> for \<A> ap aa
+    unfolding evsids_def defined_lit_map
     by auto
   have [simp]: \<open>bump_heur \<A> (Decided (Pos (atm_of ap)) # aa)= bump_heur \<A> (Decided ap # aa)\<close>
     \<open>bump_heur \<A> (Decided (-ap) # aa) = bump_heur \<A> (Decided ap # aa)\<close> for \<A> ap aa bc
