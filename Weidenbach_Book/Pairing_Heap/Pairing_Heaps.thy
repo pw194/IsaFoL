@@ -2789,6 +2789,83 @@ lemma mset_nodes_hp_rescale_weight[simp]: \<open>mset_nodes (hp_rescale_weight \
 lemma set_hp_hp_rescale_weight[simp]: \<open>set_hp (hp_rescale_weight \<beta> h) = (\<lambda>x. \<beta> * x) ` set_hp h\<close>
   by (induction h rule: hp_rescale_weight.induct) auto
 
+lemma hp_node_hp_rescale[simp]:
+  \<open>hp_node v (hp_rescale_weight a xx) = map_option (hp_rescale_weight a) (hp_node v xx)\<close>
+  apply (induction v xx rule: hp_node.induct)
+  subgoal
+    by (auto split: option.splits simp: hp_node.simps simp del: hp_node_children_simps2 dest: distinct_mset_union)
+  subgoal
+    by (auto split: option.splits simp: hp_node.simps simp del: hp_node_children_simps2 dest: distinct_mset_union)
+  done
+
+lemma [simp]: \<open>map_option node (hp_next x (hp_rescale_weight x1 y)) = map_option node (hp_next x y)\<close>
+  apply (induction x y rule: hp_next.induct)
+  subgoal
+    apply (auto simp: hp_next.simps simp del: )
+    by (metis (no_types, lifting) ext hp.exhaust_sel hp.sel(1) hp_next_children_simps(1,2,3) hp_rescale_weight.simps option.map(2) option.map_disc_iff)
+  subgoal by auto
+  subgoal by auto
+  done
+
+lemma node_hp_rescale_weight[simp]: \<open>node (hp_rescale_weight x1 b) = node b\<close>
+  by (cases b) auto
+
+lemma [simp]: \<open>map_option node (hp_prev x (hp_rescale_weight x1 y)) = map_option node (hp_prev x y)\<close>
+  apply (induction x y rule: hp_prev.induct)
+  subgoal
+    by (auto simp: hp_prev.simps hp_prev_children.simps split: option.splits simp del: )
+  subgoal by auto
+  subgoal by auto
+  done
+
+lemma hp_child_hp_rescale_None_iff[simp]: \<open>hp_child a (hp_rescale_weight x1 x) = None \<longleftrightarrow>  hp_child a x = None\<close>
+  apply (induction x)
+  subgoal for x xs children
+    apply (cases children)
+     apply (auto simp: hp_child.simps hp_child_children_def
+        List.map_filter_def option_hd_def filter_empty_conv split: option.splits)+
+    by fastforce
+  done
+
+lemma [simp]: \<open>map_option node (hp_child x (hp_rescale_weight x1 y)) = map_option node (hp_child x y)\<close>
+  apply (induction x y rule: hp_child.induct)
+  subgoal
+    by (auto simp: hp_child.simps split: option.splits simp del: )
+  subgoal by (auto simp: hp_child.simps split: option.splits)
+  done
+
+lemma hp_parent_hp_rescale_None_iff[simp]: \<open>hp_parent a (hp_rescale_weight x1 x) = None \<longleftrightarrow>  hp_parent a x = None\<close>
+  apply (induction x)
+  subgoal for x xs children
+    apply (cases children)
+    by (auto simp: hp_parent.simps hp_child_children_def
+        List.map_filter_def option_hd_def filter_empty_conv split: option.splits)+
+  done
+
+lemma ex_hp_parent_hp_rescale_weight[iff]: \<open>(\<exists>y. hp_parent n (hp_rescale_weight x1 x) = Some y) \<longleftrightarrow> (\<exists>y. hp_parent n (x) = Some y)\<close>
+  by (metis hp_parent_hp_rescale_None_iff not_None_eq2)
+
+lemma [simp]: \<open>map_option node (hp_parent x (hp_rescale_weight x1 y)) = map_option node (hp_parent x y)\<close>
+  apply (induction x y rule: hp_parent.induct)
+  subgoal for n a sc x children
+    apply (cases \<open> (filter (\<lambda>x. \<exists>y. hp_parent n x = Some y) children)\<close>)
+    apply (auto simp: hp_parent.simps filter_empty_conv filter_map comp_def)
+    apply force
+    by (metis (no_types, lifting) filter_eq_ConsD hp_parent_hp_rescale_None_iff in_list_in_setD option.map_sel)
+  subgoal by (auto simp: hp_parent.simps)
+  done
+
+lemma [simp]: \<open>map_option score (map_option (hp_rescale_weight \<beta>) (hp_node x y)) = map_option (\<lambda>x. \<beta> * x) (hp_score x y)\<close>
+  apply (induction x y rule: hp_node.induct)
+  subgoal by (auto simp:  split: option.splits)
+  subgoal by (auto simp: )
+  done
+
+lemma score_hp_rescale_weights_hp_node: \<open> v \<in># mset_nodes ya \<Longrightarrow>
+       score (the (map_option (hp_rescale_weight \<beta>) (hp_node v ya))) =
+      (\<lambda>x. \<beta> * x) ((the (hp_score v ya)))\<close>
+  by (metis hp.exhaust_sel hp.sel(2) hp_node_None_notin2 hp_rescale_weight.simps option.map_sel)
+
 locale pairing_heap_assms2 = pairing_heap_assms lt le +
   hmstruct_with_prio lt le +
   hmstruct_with_prio lt le

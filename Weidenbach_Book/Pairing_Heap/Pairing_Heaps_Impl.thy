@@ -1298,7 +1298,6 @@ definition mop_rescale_and_reroot where
    }
 }\<close>
 
-
 lemma mop_rescale_and_reroot_spec:
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(h,i)\<in>nat_rel\<close> \<open>(w, w') \<in> Id\<close>
   shows \<open>mop_rescale_and_reroot h w xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (rescale_and_reroot i w' ys)\<close>
@@ -1327,7 +1326,6 @@ definition mop_hp_is_in :: \<open>_\<close> where
    RETURN (s \<noteq> None \<and> (prev \<noteq> None \<or> parent \<noteq> None \<or> the s = h))
   })\<close>
 
-
 lemma mop_hp_is_in_spec:
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(h,i)\<in>nat_rel\<close>
   shows \<open>mop_hp_is_in h xs \<le> \<Down>bool_rel (hp_is_in i ys)\<close>
@@ -1347,16 +1345,12 @@ proof -
      auto
 qed
 
-
 lemma mop_hp_read_score_imp_mop_hp_read_score:
   assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(h,i)\<in>nat_rel\<close>
   shows \<open>mop_hp_read_score_imp h xs \<le> \<Down>Id (mop_hp_read_score i ys)\<close>
   unfolding mop_hp_read_score_def case_prod_beta mop_hp_read_score_imp_def
   apply (refine_vcg mop_hp_read_score_imp_spec)
   using assms by (auto simp: pairing_heaps_rel_def map_fun_rel_def dest!: multi_member_split)
-
-definition mop_imp_needs_rescaling :: \<open>('a,'b)pairing_heaps_imp \<Rightarrow> 'c \<Rightarrow> bool nres\<close> where
-  \<open>mop_imp_needs_rescaling = (\<lambda>_ _. SPEC (\<lambda>_. True))\<close>
 
 definition mop_imp_decreases_weights_only
   :: \<open>double\<^sub>p \<Rightarrow> ('a, double\<^sub>p)pairing_heaps_imp \<Rightarrow> (('a, double\<^sub>p)pairing_heaps_imp) nres\<close> where
@@ -1377,28 +1371,9 @@ definition mop_imp_decreases_weights_only
      RETURN (prevs', nxts', children', parents', scores', h')
   })\<close>
 
-(*TODO: This wrapper here is not needed and does the wrong thing for evsids*)
-definition mop_imp_decreases_weights :: \<open>double\<^sub>p \<Rightarrow> ('a,double\<^sub>p)pairing_heaps_imp \<Rightarrow> (('a,double\<^sub>p)pairing_heaps_imp) nres\<close> where
- \<open>mop_imp_decreases_weights \<beta> = (\<lambda>h. do {
-   rescaling \<leftarrow> mop_imp_needs_rescaling h \<beta>;
-   if \<not>rescaling then RETURN h
-   else mop_imp_decreases_weights_only \<beta> h
-  })\<close>
-
-definition mop_hp_needs_rescaling :: \<open>(nat multiset \<times> (nat,'c) hp_fun \<times> nat option) \<Rightarrow> bool nres\<close> where
-  \<open>mop_hp_needs_rescaling = (\<lambda>(\<V>, (prevs, nxts, childs, parents, scores), h). SPEC (\<lambda>_. True))\<close>
-
 definition mop_hp_decreases_weights_only :: \<open>'c :: {zero,ord,times} \<Rightarrow> (nat multiset \<times> (nat,'c) hp_fun \<times> nat option) \<Rightarrow> ((nat multiset \<times> (nat,'c) hp_fun \<times> nat option)) nres\<close> where
   \<open>mop_hp_decreases_weights_only \<beta> = (\<lambda>(\<V>, (prevs, nxts, childs, parents, scores), h). do {
       RETURN ((\<V>, (prevs, nxts, childs, parents,  \<lambda>x. map_option (\<lambda>x. \<beta> * x) (scores x)), h))
-  })\<close>
-
-(*TODO: not sure if needed*)
-definition mop_hp_decreases_weights :: \<open>'c :: {zero,ord,times} \<Rightarrow> (nat multiset \<times> (nat,'c) hp_fun \<times> nat option) \<Rightarrow> ((nat multiset \<times> (nat,'c) hp_fun \<times> nat option)) nres\<close> where
-  \<open>mop_hp_decreases_weights \<beta> = (\<lambda>(\<V>, (prevs, nxts, childs, parents, scores), h). do {
-    rescaling \<leftarrow> mop_hp_needs_rescaling ((\<V>, (prevs, nxts, childs, parents, scores), h));
-    if \<not>rescaling then RETURN ((\<V>, (prevs, nxts, childs, parents, scores), h))
-    else mop_hp_decreases_weights_only \<beta> ((\<V>, (prevs, nxts, childs, parents, scores), h))
   })\<close>
 
 lemma take_last_update_identical_mul: \<open>length x1l > 0 \<Longrightarrow> take (length x1l - Suc 0) (map (\<lambda>x. \<beta> * x) x1l) @ [\<beta> * x1l ! (length x1l - Suc 0)] = map (\<lambda>x. \<beta> * x) x1l\<close>
@@ -1409,8 +1384,7 @@ lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
   shows \<open>mop_imp_decreases_weights_only \<beta> xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (mop_hp_decreases_weights_only \<beta>' ys)\<close>
   supply [simp] = take_last_update_identical_mul
   using assms
-  unfolding mop_imp_decreases_weights_def mop_imp_decreases_weights_only_def Let_def mop_hp_needs_rescaling_def split mop_hp_decreases_weights_only_def
-   mop_imp_needs_rescaling_def
+  unfolding mop_imp_decreases_weights_only_def Let_def split mop_hp_decreases_weights_only_def
   apply (refine_vcg WHILEIT_rule[where R = \<open>measure (\<lambda>(finished, i, _). ((if finished then 0 else 1) + length (fst (snd (snd (snd (snd (xs))))))) - i)\<close>])
   subgoal by auto
   subgoal by auto
@@ -1430,21 +1404,6 @@ lemma mop_imp_decreases_weights_only_mop_hp_decreases_weights_only:
   subgoal by auto
   subgoal by (auto simp: pairing_heaps_rel_def map_fun_rel_def map_option_case comp_def eq_commute[of \<open>_ ! _\<close>]
         take_Suc_conv_app_nth nth_append list_update_append simp flip: Cons_nth_drop_Suc)
-  done
-
-lemma mop_imp_decreases_weights_mop_hp_decreases_weights:
-  assumes \<open>(xs, ys) \<in> \<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel\<close> and \<open>(\<beta>,\<beta>')\<in>Id\<close> and \<open>\<not>is_zero\<^sub>p \<beta>\<close> and \<open>\<not>is_infinity\<^sub>p \<beta>\<close>
-  shows \<open>mop_imp_decreases_weights \<beta> xs \<le> \<Down>(\<langle>\<langle>nat_rel\<rangle>option_rel,\<langle>Id\<rangle>option_rel\<rangle>pairing_heaps_rel) (mop_hp_decreases_weights \<beta>' ys)\<close>
-  supply [simp] = take_last_update_identical_mul
-  using assms
-  unfolding mop_imp_decreases_weights_def mop_hp_decreases_weights_def Let_def mop_hp_needs_rescaling_def split
-   mop_imp_needs_rescaling_def
-  apply (cases xs, cases ys, cases \<open>fst (snd ys)\<close>, hypsubst)
-  unfolding prod.case fst_conv snd_conv
-  apply hypsubst
-  unfolding prod.case fst_conv snd_conv
-  apply (refine_vcg mop_imp_decreases_weights_only_mop_hp_decreases_weights_only)
-  subgoal by auto
   done
 
 end

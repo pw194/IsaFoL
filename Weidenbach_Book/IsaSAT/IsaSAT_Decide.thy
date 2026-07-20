@@ -34,7 +34,7 @@ lemma isa_bump_find_next_undef_bump_find_next_undef:
   apply (intro frefI nres_relI)
   apply (case_tac \<open>x\<close>, case_tac \<open>fst x\<close>,  case_tac \<open>y\<close>, case_tac \<open>fst y\<close>, hypsubst, clarsimp simp only: fst_conv tuple4.case)
   apply (refine_rcg isa_vmtf_find_next_undef_vmtf_find_next_undef[THEN fref_to_Down_curry]
-    isa_evsids_find_next_undef_acids_find_next_undef[THEN fref_to_Down_curry])
+    isa_evsids_find_next_undef_evsids_find_next_undef[THEN fref_to_Down_curry])
   subgoal by auto
   subgoal by auto
   subgoal by auto
