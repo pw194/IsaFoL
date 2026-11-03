@@ -1,0 +1,5 @@
+session CDCL_T = CDCL +
+  theories
+    CDCL_W_Bound
+    CDCL_W_T
+    Theory_Intf
