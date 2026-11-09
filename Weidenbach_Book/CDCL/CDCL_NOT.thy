@@ -970,10 +970,10 @@ proof -
     n \<ge> length (trail S)\<close> for n
     apply (auto simp: split: if_splits)
     unfolding nth_append
-    by (smt (z3) One_nat_def Suc_1
-      \<open>length (trail S) = card (atm_of ` lits_of_l (trail S))\<close> ex_map_conv
-      length_map length_rev linorder_not_le n_not_Suc_n nth_mem numeral_3_eq_3
-      numeral_eq_one_iff verit_eq_simplify(12))
+    apply simp
+    using \<open>length (trail S) = card (atm_of ` lits_of_l (trail S))\<close>
+    by (smt (verit, best) le_eq_less_or_eq length_rev less_add_one less_not_refl nat_le_linear not_add_less2 nth_map numeral_Bit1 numeral_One
+        one_add_one) 
 
   show ?thesis
     using 1 by (auto simp: in_dpll_mes_set_iff dest: H)

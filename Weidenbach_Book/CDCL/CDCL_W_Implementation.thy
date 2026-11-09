@@ -284,7 +284,7 @@ proof (standard, standard)
     setD: "set D = set (L' # C')" and
     C': "mset C' = C" and
     L: "L = L'"
-    using DCL by (metis add_mset_add_single ex_mset list.simps(15) set_mset_add_mset_insert
+    using DCL by (metis add_single_right_eq_add_mset ex_mset list.simps(15) set_mset_add_mset_insert
         set_mset_mset)
   have "find_first_unit_clause (?N @ ?U) ?M \<noteq> None"
     apply (rule find_first_unit_clause_none[of D "?N @ ?U" ?M L, OF D])
@@ -416,7 +416,7 @@ proof (induction S rule: do_resolve_step.induct)
   have CL: "mset C - {#L#} + {#L#} = mset C" using \<open>L \<in> set C\<close> by (auto simp add: multiset_eq_iff)
   have "get_maximum_level (Propagated L (C' + {#L#}) # map convert M) D' = count_decided M"
     using M[simplified] unfolding maximum_level_code_eq_get_maximum_level C[symmetric] CL
-    by (metis D D'L \<open>add_mset L C' = mset C\<close> add_mset_add_single convert.simps(1)
+    by (metis D D'L \<open>add_mset L C' = mset C\<close> add_single_right_eq_add_mset convert.simps(1)
         get_maximum_level_map_convert list.simps(9))
   then have
     "resolve
@@ -1238,6 +1238,6 @@ export_code do_all_cdcl\<^sub>W_stgy_nat Pos Neg natural_of_nat nat_of_integer i
   in SML
   module_name SAT_Solver
   file_prefix "Functional_Solver"
-
+(*>*)
 
 end
