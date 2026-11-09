@@ -666,7 +666,7 @@ simple_backtrack_rule: "
 
 inductive_cases simple_backtrackE: "simple_backtrack S T"
 
-text \<open>This is a generalised version of backtrack: It is general enough te also include
+text \<open>This is a generalised version of backtrack: It is general enough to also include
   OCDCL's version.\<close>
 inductive backtrackg :: "'st \<Rightarrow> 'st \<Rightarrow> bool" for S :: 'st where
 backtrackg_rule: "
