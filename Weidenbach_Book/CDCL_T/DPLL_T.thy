@@ -2,119 +2,273 @@ theory DPLL_T
 imports CDCL.DPLL_W
 begin
 
-(*
-locale theory_problem =
-  fixes
-    theory_entails_set :: \<open>'a \<Rightarrow> 'v clauses \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<^sub>s\<close> 90) and
-    theory_entails :: \<open>'v literal set \<Rightarrow> 'a \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 90)
-  assumes
-    entail_mono: \<open>N \<Turnstile>\<^sub>\<T>\<^sub>s N' \<Longrightarrow> N \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> N \<Turnstile>\<^sub>\<T>\<^sub>s add_mset C N'\<close> and
-    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N' \<Longrightarrow> I \<Turnstile>sm N' \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> N \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> N \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> atms_of C \<subseteq> atm_of ` I \<and> C \<in> simple_clss (atm_of ` I))\<close>and
-    theory_model_model_sat: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N' \<Longrightarrow> N \<Turnstile>\<^sub>\<T>\<^sub>s N' \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> N \<Longrightarrow> satisfiable (set_mset N')\<close>
-*)
-text \<open>
-For the locale I am trying out single clause entailment for now, as everything else can be
-easily derived by it anyways. The type 'p stands for the theory problem in question, which I
-assume to be the formula prior to its propositional abstraction. The entailment operators
-include the translation between the theory and the propositional side, while respecting the
-induced valuation.
-\<close>
-locale theory_problem =
-  fixes
-    theory_entails_clause :: \<open>'p \<Rightarrow> 'v clause \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<^sub>C\<close> 50) and
-    theory_check :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close>   (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 90)
+section \<open>DPLL(\<T>)\<close>
 
-  assumes prop_entail_is_theory_entail: \<open>(\<forall>C \<in># N. P \<Turnstile>\<^sub>\<T>\<^sub>C C) \<Longrightarrow> N \<Turnstile>pm C \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>C C\<close>
+text \<open>
+  This file... WIP description
+\<close>
+
+locale theory_problem =
+  fixes
+    theory_entails_clauses :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<^sub>s\<close> 50) and
+    theory_check           :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 50)
+
+assumes
+    entail_mono: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s add_mset C N\<close> and
+    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
+    theory_model_model_sat: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> satisfiable (set_mset N)\<close>
 begin
 
-text \<open>I try to simulate the behavior of a stupid implementation of plain DPLL with a theory
-      consistency check on the already existing calculus to reuse proofs. Effectively, we
-      build the set of all theory lemmas and consider them to be already part of the original
-      clause set\<close>
+subsection \<open>The rules\<close>
+text \<open>
+  Instead of directly working in the \<^file>\<open>../CDCL/DPLL_W.thy\<close> file and adjusting the rules,
+  I try a simulation. Further, the new backtrack rule does not talk about any clause, but
+  simply allows to check the consistency of the current trail if at least one decision is present
+\<close>
 inductive dpll\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> bool\<close> for P where
   dpll\<^sub>W_step: \<open>dpll\<^sub>W S S' \<Longrightarrow>  dpll\<^sub>\<T> P S S'\<close> |
   backtrack\<^sub>\<T>: \<open>backtrack_split (trail S) = (M', L # M) 
                 \<Longrightarrow> is_decided L 
-                \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>C D 
-                \<Longrightarrow> trail S \<Turnstile>as CNot D 
+                \<Longrightarrow> \<not> lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P
                 \<Longrightarrow> dpll\<^sub>\<T> P S (Propagated (- (lit_of L)) () # M, clauses S)\<close>
 
-text \<open>This is the finite set of all theory lemmas\<close>
-definition simple_clss_theory :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> 'v clauses\<close> where
-  \<open>simple_clss_theory P N = mset_set {C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>C C}\<close>
+lemma dpll\<^sub>\<T>_same_clauses: \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> clauses S = clauses S'\<close>
+proof (induction rule: dpll\<^sub>\<T>.induct)
+  case (dpll\<^sub>W_step S S')
+  then show ?case by (simp add: dpll\<^sub>W_same_clauses) 
+next
+  case (backtrack\<^sub>\<T> S M' L M)
+  then show ?case by auto
+qed
 
+subsection \<open>Theory Lemmas\<close>
+text \<open>
+  Given a theory problem P and clause set N, we define the extension of N with respect to P
+  to include all simple clauses that can be build over the atoms in N, and which are theory 
+  entailed. Note that this set is finite, as the set of simple clauses over N is finite as well. 
+\<close>
+definition simple_clss_theory :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> 'v clauses\<close> where
+  \<open>simple_clss_theory P N = mset_set {C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}}\<close>
+
+lemma simple_clss_theory_finite: \<open>finite ({C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}})\<close>
+  by (simp add: simple_clss_finite)
+  
 lemma simple_clss_theory_distinct: \<open>distinct_mset (simple_clss_theory P N)\<close>
   by (simp add: simple_clss_theory_def)
 
 lemma set_mset_simple_clss_theory:
-  \<open>set_mset (simple_clss_theory P N) = {C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>C C}\<close>
+  \<open>set_mset (simple_clss_theory P N) = {C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}}\<close>
   unfolding simple_clss_theory_def using simple_clss_theory_distinct
   by (auto simp: simple_clss_finite)
 
-text \<open>The normal dpll state gets extended by adding the theory lemmas to the clauses\<close>
+text \<open>
+  The normal \<^verbatim>\<open>dpll\<^sub>W\<close> state gets extended by adding the theory lemmas to the clauses. I
+  call the extension function \<^verbatim>\<open>state\<^sub>\<T>\<close>.
+\<close>
 definition state\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state\<close> where
   \<open>state\<^sub>\<T> P S = (trail S, (clauses S) + (simple_clss_theory P (clauses S)))\<close>
 
 lemma state\<^sub>\<T>_trail_equals_state[simp]: \<open>trail (state\<^sub>\<T> P S) = trail S\<close>
   by (auto simp: state\<^sub>\<T>_def)
 
-lemma state\<^sub>\<T>_clauses_equals: \<open>clauses (state\<^sub>\<T> P S) = (clauses S + (simple_clss_theory P (clauses S)))\<close>
+lemma state\<^sub>\<T>_clauses_equals_clauses[simp]: \<open>clauses (state\<^sub>\<T> P S) = (clauses S + (simple_clss_theory P (clauses S)))\<close>
   by (auto simp: state\<^sub>\<T>_def)
 
-lemma state_clauses_state\<^sub>\<T>_subset: \<open>clauses S \<subseteq># clauses (state\<^sub>\<T> P S)\<close>
+lemma state\<^sub>\<T>_pair[simp]: \<open>state\<^sub>\<T> P (M, N) = (M, N + simple_clss_theory P N)\<close>
+  by (simp add: state\<^sub>\<T>_def)
+
+lemma state_clauses_subset_state\<^sub>\<T>_clauses: \<open>clauses S \<subseteq># clauses (state\<^sub>\<T> P S)\<close>
   by (auto simp: state\<^sub>\<T>_def)
+
+lemma atms_of_mm_simple_clss_theory_subset:
+  \<open>atms_of_mm (simple_clss_theory P N) \<subseteq> atms_of_mm N\<close>
+  by (auto simp: set_mset_simple_clss_theory simple_clss_def atms_of_ms_def)
+
+lemma atms_of_mm_state\<^sub>\<T>_clauses_equals[simp]:
+  \<open>atms_of_mm (clauses (state\<^sub>\<T> P S)) = atms_of_mm (clauses S)\<close>
+  using atms_of_mm_simple_clss_theory_subset[of P \<open>clauses S\<close>] by (auto simp: state\<^sub>\<T>_def)
+
+lemma simple_clss_trail_in_simple_clss_theory:
+  assumes  inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close> 
+           and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#}\<close> 
+           and simple: \<open>D \<in> simple_clss (atm_of ` lits_of_l (trail (state\<^sub>\<T> P S)))\<close>
+         shows \<open>D \<in># simple_clss_theory P (clauses (state\<^sub>\<T> P S))\<close>
+proof -
+  have \<open>atms_of D \<subseteq> (atm_of ` lits_of_l (trail (state\<^sub>\<T> P S)))\<close> using simple by (auto simp: simple_clss_def)  
+  also have \<open>... \<subseteq> atms_of_mm (clauses (state\<^sub>\<T> P S))\<close> by (rule dpll\<^sub>W_all_inv_dest(2)[OF inv])
+  finally have \<open>D \<in> simple_clss (atms_of_mm (clauses (state\<^sub>\<T> P S)))\<close>
+    using simple by (auto simp: simple_clss_def)
+  then show ?thesis
+    using ent by (simp add: set_mset_simple_clss_theory)
+qed
+
+subsection \<open>Simulation\<close>
+text \<open>
+  We now want to show that a step of our \<^verbatim>\<open>dpll\<^sub>\<T>\<close> transition system corresponds to a step in our
+  \<^verbatim>\<open>dpll\<^sub>W\<close> transition system, but where we consider the set of theory lemmas to be part of the
+  initial clause set, i.e., we consider the state extension via \<^verbatim>\<open>state\<^sub>\<T>\<close>
+\<close>
 
 lemma dpll\<^sub>W_step_is_state\<^sub>\<T>_step: \<open>dpll\<^sub>W S S' \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
 proof (induction rule: dpll\<^sub>W.induct)
-  case (propagate L C S)
-  have member: \<open>add_mset L C \<in># clauses (state\<^sub>\<T> P S)\<close> 
-    using state_clauses_state\<^sub>\<T>_subset[of S P] propagate by auto
-  have conf: \<open>trail (state\<^sub>\<T> P S) \<Turnstile>as CNot C\<close> 
-    using propagate by auto
-  have undef: \<open>undefined_lit (trail (state\<^sub>\<T> P S)) L\<close>
-    using propagate by auto
-  then show ?case using propagate member conf undef dpll\<^sub>W.propagate
-    using state\<^sub>\<T>_def by (metis fst_eqD snd_eqD) 
+  case (propagate L C S) note[simp] = propagate
+  then have \<open>add_mset L C \<in># clauses (state\<^sub>\<T> P S)\<close> 
+    using state_clauses_subset_state\<^sub>\<T>_clauses[of S P] by auto
+  moreover have conf: \<open>trail (state\<^sub>\<T> P S) \<Turnstile>as CNot C\<close> 
+    by auto
+  moreover have undef: \<open>undefined_lit (trail (state\<^sub>\<T> P S)) L\<close>
+    by auto
+  ultimately show ?case
+    using dpll\<^sub>W.propagate[of L C \<open>state\<^sub>\<T> P S\<close>] by auto
 next
-  case (decided S L)
-  then show ?case
-    using state_clauses_state\<^sub>\<T>_subset theory_problem_axioms
-    by (metis (no_types, lifting) atms_of_ms_mono basic_trans_rules(31) dpll\<^sub>W.decided fst_eqD set_mset_mono sndI theory_problem.state\<^sub>\<T>_def)
+  case (decided S L) note[simp] = decided
+  then have \<open>undefined_lit (trail (state\<^sub>\<T> P S)) L\<close> by auto 
+  moreover have \<open>atm_of L \<in> atms_of_mm (clauses (state\<^sub>\<T> P S))\<close> by auto
+  ultimately show ?case
+    using dpll\<^sub>W.decided[of \<open>state\<^sub>\<T> P S\<close> L] by auto
 next
-  case (backtrack S M' L M D)
-  then show ?case
-    using state\<^sub>\<T>_def
-    using theory_problem_axioms by (metis (no_types, lifting) dpll\<^sub>W.backtrack mset_subset_eqD split_pairs2 theory_problem.state_clauses_state\<^sub>\<T>_subset)
+  case (backtrack S M' L M D) note[simp] = backtrack
+  then have \<open>backtrack_split (trail (state\<^sub>\<T> P S)) = (M', L # M)\<close> by auto
+  moreover have \<open>is_decided L\<close> by auto
+  moreover have \<open>D \<in># clauses (state\<^sub>\<T> P S)\<close> by auto
+  moreover have \<open>trail (state\<^sub>\<T> P S) \<Turnstile>as CNot D\<close> by auto
+  ultimately show ?case
+    using dpll\<^sub>W.backtrack[of \<open>state\<^sub>\<T> P S\<close> M' L M D] by auto 
 qed
 
-lemma dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step: \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> dpll\<^sub>W_all_inv S \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
-  proof(induction rule: dpll\<^sub>\<T>.induct)
-    case (dpll\<^sub>W_step S S')
-    then show ?case using dpll\<^sub>W_step_is_state\<^sub>\<T>_step by auto
-  next
-    case (backtrack\<^sub>\<T> S M' L M D)
-    have atms: \<open>atms_of (remdups_mset D) \<subseteq> atms_of_mm(clauses S)\<close>
-      using backtrack\<^sub>\<T>.hyps(4) backtrack\<^sub>\<T>.prems
-      by (metis (no_types, opaque_lifting) CNot_remdups_mset atms_of_negate_ann_lits dpll\<^sub>W_all_inv_dest(2)
-          entails_CNot_negate_ann_lits lits_subseteq_imp_atms_subseteq order.trans) 
-    have taut: \<open>\<not>tautology (remdups_mset D)\<close>
-      using backtrack\<^sub>\<T>.hyps(4) backtrack\<^sub>\<T>.prems
-      by (meson consistent_CNot_not_tautology dpll\<^sub>W_all_inv_dest(3) tautology_remdups_mset
-          true_annots_true_cls) 
-    have remdups_entail: \<open>set_mset {#D#} \<Turnstile>p remdups_mset D\<close>
-      by simp 
-    have ent': \<open>P \<Turnstile>\<^sub>\<T>\<^sub>C remdups_mset D\<close>
-      using backtrack\<^sub>\<T>.hyps(3) prop_entail_is_theory_entail remdups_entail
-      by (metis set_mset_add_mset_insert set_mset_empty singletonD) 
-    have tlemma: \<open>remdups_mset D \<in># simple_clss_theory P (clauses S)\<close>
-      using ent' atms taut by (simp add: set_mset_simple_clss_theory simple_clss_def)
-    then show ?case
-      using backtrack\<^sub>\<T>.hyps(1,2,4) state\<^sub>\<T>_def by (metis CNot_remdups_mset backtrack fst_eqD snd_eqD union_iff)
+lemma theory_conflict_trail:
+  assumes cons: \<open>consistent_interp (lits_of_l M)\<close> and conf: \<open>\<not> lits_of_l M \<Turnstile>\<^sub>\<T> P\<close>
+  obtains C where \<open>(M \<Turnstile>as CNot C)\<close> \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#})\<close> \<open>(C \<in> simple_clss (atm_of ` lits_of_l M))\<close>
+  using assms proof -
+  let ?N = \<open>mset (map (\<lambda>L. {#lit_of L#}) M)\<close>
+  have atms: \<open>(atm_of ` (lits_of_l M)) = (atms_of_mm ?N)\<close> by auto
+  have ent: \<open>lits_of_l M \<Turnstile>sm ?N\<close> by (auto simp: true_clss_def lits_of_def)
+  obtain D where \<open>(lits_of_l M) \<Turnstile>s CNot D\<close> \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#}\<close> \<open>D \<in> simple_clss (atm_of ` (lits_of_l M))\<close>
+    using theory_model_found_or_conflict[OF cons atms ent] conf by blast
+  then show ?thesis
+    using that unfolding true_annots_true_cls by blast
+qed
+
+lemma dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step:
+  \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
+proof (induction rule: dpll\<^sub>\<T>.induct)
+  case (dpll\<^sub>W_step S S')
+  then show ?case using dpll\<^sub>W_step_is_state\<^sub>\<T>_step by auto
+next
+  case (backtrack\<^sub>\<T> S M' L M)
+  then obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
+    and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
+    and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
+    using theory_conflict_trail[of \<open>trail (state\<^sub>\<T> P S)\<close> P] state\<^sub>\<T>_trail_equals_state 
+    by (auto simp: dpll\<^sub>W_all_inv_def)
+  then have D_thm: \<open>D \<in># simple_clss_theory P (clauses (state\<^sub>\<T> P S))\<close>
+    using simple_clss_trail_in_simple_clss_theory backtrack\<^sub>\<T>.prems by auto 
+  then have cls: \<open>D \<in># clauses (state\<^sub>\<T> P S)\<close>
+    using atms_of_mm_state\<^sub>\<T>_clauses_equals set_mset_simple_clss_theory by fastforce
+  have trail_decomp: \<open>backtrack_split (trail (state\<^sub>\<T> P S)) = (M', L # M)\<close> using backtrack\<^sub>\<T> by auto
+  then show ?case 
+    using dpll\<^sub>W.backtrack[OF trail_decomp backtrack\<^sub>\<T>(2) cls cnot] by auto
+qed
+
+subsection \<open>Invariants\<close>
+lemma dpll\<^sub>W_inv_extended_inv: \<open>dpll\<^sub>W_all_inv S \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close>
+  unfolding dpll\<^sub>W_all_inv_def
+  apply (intro conjI)
+  subgoal by (rule all_decomposition_implies_mono[OF set_mset_mono[OF state_clauses_subset_state\<^sub>\<T>_clauses]]) auto
+  subgoal by auto 
+  subgoal by auto
+  subgoal by auto
+  done
+
+lemma dpll\<^sub>\<T>_inv: \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S')\<close>
+  using dpll\<^sub>W_all_inv dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step by blast
+
+lemma dpll\<^sub>\<T>_inv_rtranclp: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S')\<close>
+proof (induction rule: rtranclp.induct)
+  case (rtrancl_refl a)
+  then show ?case by auto
+next
+  case (rtrancl_into_rtrancl a b c)
+  then show ?case using dpll\<^sub>\<T>_inv by auto
+qed
+
+subsection \<open>Termination\<close>
+lemma wf_dpll\<^sub>\<T>: 
+  \<open>wf {(S', S). dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<and> dpll\<^sub>\<T> P S S'}\<close>
+  apply (rule wf_subset[OF wf_if_measure_f[OF wf_dpll\<^sub>W, of \<open>state\<^sub>\<T> P\<close>]])
+  using dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step by auto (*Question for Mathias*)
+
+subsection \<open>Conclusive and final states\<close>
+text \<open>First idea for conclusive\<close>
+(*
+definition "conclusive_dpll\<^sub>W_state (S:: 'v dpll\<^sub>W_state) \<longleftrightarrow>
+  (trail S \<Turnstile>asm clauses S \<or> ((\<forall>L \<in> set (trail S). \<not>is_decided L)
+  \<and> (\<exists>C \<in># clauses S. trail S \<Turnstile>as CNot C)))"
+*)
+definition "conclusive_dpll\<^sub>\<T>_state P S \<longleftrightarrow>
+  ((trail S \<Turnstile>asm clauses S \<and> lits_of (set (trail S)) \<Turnstile>\<^sub>\<T> P) \<or> ((\<forall>L \<in> set (trail S). \<not>is_decided L)
+  \<and> (\<exists>C \<in># clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C)))"
+
+lemma dpll\<^sub>\<T>_final_state_is_dpll\<^sub>W_final_state: \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> \<forall>S'. \<not>(dpll\<^sub>W S S')\<close>
+  using dpll\<^sub>W_step by blast
+
+lemma dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state: \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> conclusive_dpll\<^sub>\<T>_state P S\<close>
+proof (rule ccontr)
+  assume \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close> and \<open>\<not> conclusive_dpll\<^sub>\<T>_state P S\<close>
+  then show \<open>False\<close>
+    unfolding conclusive_dpll\<^sub>\<T>_state_def
+    apply (simp only: de_Morgan_disj de_Morgan_conj)
+  proof -
+    assume A1: \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close>
+    assume A2: \<open>(\<not> trail S \<Turnstile>asm clauses S \<or> \<not> lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P) \<and> (\<not> (\<forall>L\<in>set (trail S). \<not> is_decided L) \<or> \<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C))\<close>
+    then show \<open>False\<close>
+      apply (elim conjE)
+      apply (elim disjE)
+      subgoal
+        using A1 conclusive_dpll\<^sub>W_state_def dpll\<^sub>W_no_more_step_is_a_conclusive_state dpll\<^sub>W_step by blast 
+      subgoal
+        using A1 dpll\<^sub>W_step state_clauses_subset_state\<^sub>\<T>_clauses by (meson conclusive_dpll\<^sub>W_state_def dpll\<^sub>W_no_more_step_is_a_conclusive_state mset_subset_eqD) 
+      subgoal
+        using A1 backtrack\<^sub>\<T> by (metis backtrack_split_snd_hd_decided backtrack_split_some_is_decided_then_snd_has_hd list.discI list.sel(1) snd_eqD) 
+      subgoal sorry
+      done
   qed
+qed
+
+subsection \<open>Soundness\<close>
+
+text \<open>First idea for satisfiable\<close>
+(*
+definition satisfiable :: "'a clause set \<Rightarrow> bool" where
+  "satisfiable CC \<longleftrightarrow> (\<exists>I. (I \<Turnstile>s CC \<and> consistent_interp I \<and> total_over_m I CC))"
+*)
+definition satisfiable\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v clause set \<Rightarrow> bool\<close> where
+  \<open>satisfiable\<^sub>\<T> P N \<longleftrightarrow>
+     (\<exists>I. consistent_interp I \<and> total_over_m I N \<and> I \<Turnstile>s N \<and> I \<Turnstile>\<^sub>\<T> P)\<close>
+
+lemma dpll\<^sub>W_all_inv_state\<^sub>\<T>_init: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P ([], N))\<close>
+  unfolding dpll\<^sub>W_all_inv_def by auto
+
+subsection \<open>Soundness\<close>
+text \<open>Wip\<close>
+
+(*
+lemma dpll\<^sub>W_sound:
+  assumes
+    "rtranclp dpll\<^sub>W ([], N) (M, N)" and
+    "\<forall>S. \<not>dpll\<^sub>W (M, N) S"
+  shows "M \<Turnstile>asm N \<longleftrightarrow> satisfiable (set_mset N)" (is "?A \<longleftrightarrow> ?B")
+*)
+
+text \<open>First idea\<close>
+lemma dpll\<^sub>\<T>_sound:
+  assumes \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close> and
+          \<open>\<forall>S. \<not>dpll\<^sub>\<T> P (M, N) S\<close>
+  shows \<open>M \<Turnstile>asm N \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close>
+  sorry
 
 end
-
 
 end
