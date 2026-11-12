@@ -1,5 +1,5 @@
 theory LocaleTestMIA
-imports DPLL_T 
+imports CDCL_T.DPLL_T
 begin
 
 

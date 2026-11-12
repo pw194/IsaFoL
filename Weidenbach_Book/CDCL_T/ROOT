@@ -1,3 +1,11 @@
-session clCDCL_T = CDCL +
+session CDCL_T = CDCL +
   theories
     DPLL_T
+
+session CDCL_MIA in "CDCL_MIA" = MIA_Tactic +
+  sessions
+    CDCL
+    CDCL_T
+  theories
+    LocaleTest
+    LocaleTestMIA
