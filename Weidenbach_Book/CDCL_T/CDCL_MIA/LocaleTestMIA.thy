@@ -68,18 +68,59 @@ definition tcheck :: \<open>'b mia_atom literal set \<Rightarrow> 'b t_problem \
 definition tentails :: \<open>'b t_problem \<Rightarrow> 'b mia_atom clauses \<Rightarrow> bool\<close> where
   \<open>tentails P N = (\<forall>v \<beta>. sat_mf v (fst P) \<beta> (snd P) \<longrightarrow> (\<forall>C \<in># N. \<exists>L \<in># C. holds_lit v \<beta> L))\<close>
 
-(*
-    entail_add: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s add_mset C N\<close> and
-    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
-    theory_model_model_sat: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> satisfiable (set_mset N)\<close>
-    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> \<exists>J. J  \<Turnstile>\<^sub>\<T> P \<and>  I \<subseteq> J \<and> atm_of ` J = atms_of_mm N \<and> consistent_interp J\<close>
-*)
+lemma holds_lit_conflict:
+  assumes p: \<open>holds_lit v \<beta> L\<close> and n: \<open>holds_lit v \<beta> (-L)\<close>
+  shows \<open>False\<close>
+  using assms
+proof (induction L)
+  case (Pos x)
+  then show ?case 
+  proof (cases x)
+    case (ArithAtom x1)
+    then show ?thesis using Pos by auto
+  next
+    case (BoolAtom x2)
+    then show ?thesis using Pos by auto
+  qed
+next
+  case (Neg x)
+  then show ?case proof (cases x)
+    case (ArithAtom x1)
+    then show ?thesis using Neg by auto
+  next
+    case (BoolAtom x2)
+    then show ?thesis using Neg by auto
+  qed
+qed
 
-lemma test: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> tentails P N \<Longrightarrow> tcheck I P \<Longrightarrow> I \<Turnstile>sm N\<close>
-  sorry
+lemma theory_implies_prop: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> tentails P N \<Longrightarrow> tcheck I P \<Longrightarrow> I \<Turnstile>sm N\<close>
+proof
+  assume cons: \<open>consistent_interp I\<close> and atm: \<open>atm_of ` I = atms_of_mm N\<close> and ent: \<open>tentails P N\<close> and in_t: \<open>tcheck I P\<close>
+  then obtain v \<beta> where model: \<open>(sat_mf v (fst P) \<beta> (snd P))\<close>
+    by (auto simp: tcheck_def)
+  then have H1: \<open>(\<forall>C \<in># N. \<exists>L \<in># C. holds_lit v \<beta> L)\<close>
+    using ent tentails_def by blast
+  then have mutual: \<open>(\<forall>C \<in># N. \<exists>L \<in># C. (L \<in> I \<and> -L \<notin> I) \<or> (-L \<in> I \<and> L \<notin> I))\<close>
+    using atm cons
+    by (metis atms_of_s_def consistent_interp_def mset_add total_over_set_atms_of_m total_over_set_literal_defined)
+  have \<open>\<forall>C \<in># N. \<exists>L \<in># C. L \<in> I\<close>
+  proof
+    fix C
+    assume A1: \<open>C \<in># N\<close>
+    show \<open>\<exists>L\<in>#C. L \<in> I\<close>
+    proof (rule ccontr)
+      assume \<open>\<not> (\<exists>L\<in>#C. L \<in> I)\<close>
+      then have \<open>(\<forall>L\<in>#C. L \<notin> I)\<close> by auto
+      then have H2: \<open>(\<forall>L\<in>#C. -L \<in> I)\<close> using mutual A1 using atm by (metis atm_of_in_atm_of_set_in_uminus in_implies_atm_of_on_atms_of_ms) 
+      then have \<open>(\<forall>L\<in>I. holds_lit v \<beta> L)\<close> using in_t unfolding tcheck_def using A1 ent by (metis (mono_tags, lifting) Product_Type.Collect_case_prodD holds_lit_conflict split_beta tentails_def testset.simps) 
+      then show \<open>False\<close>
+        using A1 H1 H2 holds_lit_conflict by blast 
+    qed
+  qed
+  then show \<open>I \<Turnstile>m N\<close>
+    by (simp add: true_cls_def true_cls_mset_def)
+qed
+    
 
 lemma ax1: \<open>tentails P N \<Longrightarrow> tentails P {#C#} \<Longrightarrow> tentails P (add_mset C N)\<close>
   unfolding tentails_def by auto 
@@ -91,11 +132,47 @@ lemma ax2:
           \<open>tcheck I P\<close>
         shows \<open>satisfiable (set_mset N)\<close>
   unfolding satisfiable_def
-  using assms by (meson satisfiable_carac' satisfiable_def test)
+  using assms by (meson satisfiable_carac' satisfiable_def theory_implies_prop)
+
+(*
+    entail_add: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s add_mset C N\<close> and
+    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
+    theory_model_model_sat: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> satisfiable (set_mset N)\<close>
+    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> \<exists>J. J  \<Turnstile>\<^sub>\<T> P \<and>  I \<subseteq> J \<and> atm_of ` J = atms_of_mm N \<and> consistent_interp J\<close>
+*)
+
+lemma ax3:
+  assumes cons: \<open>consistent_interp I\<close> and atm: \<open>atm_of ` I = atms_of_mm N\<close> and sat: \<open>I \<Turnstile>sm N\<close>
+  shows \<open>tcheck I P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> tentails P {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close>
+proof (cases \<open>tcheck I P\<close>)
+  case True
+  then show ?thesis by auto
+next
+  case False
+  then show ?thesis 
+    unfolding tcheck_def
+  proof(intro disjI2)
+    let ?C = \<open>{#- L. L \<in># mset_set I#}\<close>
+    assume A1: \<open>\<not> (\<exists>(v, \<beta>)\<in>testset I. sat_mf v (fst P) \<beta> (snd P))\<close>
+    have \<open>finite (atm_of ` I)\<close> by (simp add: assms(2)) 
+    moreover have \<open>I \<subseteq> Pos ` (atm_of ` I) \<union> Neg ` (atm_of ` I)\<close> by (smt (cvc5, interleave) Set.basic_monos(7) Un_subset_iff imageI imageI literal.exhaust_sel subsetI) 
+    ultimately have finite: \<open>finite I\<close> using atm
+      by (metis finite_imageI infinite_Un rev_finite_subset)
+    have cnot: \<open>I \<Turnstile>s CNot ?C\<close> using cons by (simp add: finite true_clss_def_iff_negation_in_model) 
+    have atmsub: \<open>atms_of ?C \<subseteq> atm_of ` I\<close> using finite by (metis atms_of_def atms_of_pNeg finite_set_mset_mset_set pNeg_def set_eq_subset)
+    have dis: \<open>distinct_mset ?C\<close> by (metis distinct_mset_pNeg_iff is_mset_set pNeg_def)
+    have taut: \<open>\<not>tautology ?C\<close> using assms(1) cnot consistent_CNot_not_tautology by blast 
+    have tent: \<open>tentails P {#?C#}\<close>
+      sorry
+    then show \<open>\<exists>C. I \<Turnstile>s CNot C \<and> tentails P {#C#} \<and> C \<in> simple_clss (atm_of ` I)\<close>
+      using atmsub cnot dis taut by (meson distinct_mset_not_tautology_implies_in_simple_clss in_mono simple_clss_mono)
+  qed
+qed
 
 
-(*lemma ax3:
-  assumes \<open>consistent_interp I\<close> \<open>atm_of ` I = atms_of_mm N\<close>*)
 
 value \<open>arith_atom True (GT (lp_monom 2 0) 10) :: nat mia_atom literal\<close>
 
