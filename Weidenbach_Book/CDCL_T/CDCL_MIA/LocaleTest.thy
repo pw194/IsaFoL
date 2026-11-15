@@ -6,7 +6,7 @@ section \<open>Toy interpretations\<close>
 text 
 \<open>
   Here I perform some toy interpretations of the theory_problem locale in order to get more
-  intuition behind its axioms and also show some things that do not follow from it
+  intuition behind its axioms and also show some things that do not follow from it.
 \<close>
 
 locale theory_problem_test =
@@ -42,9 +42,11 @@ text
    \<^file>\<open>../DPLL_T.thy\<close>
 \<close>
 
+text \<open>The theory entails clauses if they are all subsumed by clauses in P\<close>
 definition theory_entails_clauses :: \<open>nat clauses \<Rightarrow> nat clauses \<Rightarrow> bool\<close> where
   \<open>theory_entails_clauses P N = (\<forall>C \<in># N. \<exists>D \<in># P. (set_mset D) \<subseteq> (set_mset C))\<close>
 
+text \<open>The theory accepts an assignment if it satisfies all clauses that have all their atoms in \<open>I\<close>\<close>
 definition t_check :: \<open>nat literal set \<Rightarrow> nat clauses \<Rightarrow> bool\<close> where
   \<open>t_check I P = (consistent_interp I \<and> (\<forall>C \<in># P. atms_of C \<subseteq> atm_of ` I \<longrightarrow> I \<Turnstile> C))\<close>
 
@@ -91,11 +93,6 @@ qed
 
 context no_extension
 begin
-
-(*
-    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> \<exists>J. J  \<Turnstile>\<^sub>\<T> P \<and>  I \<subseteq> J \<and> atm_of ` J = atms_of_mm N \<and> consistent_interp J\<close>
-*)
 
 definition ex_N :: \<open>nat clauses\<close> where
   \<open>ex_N = {# {# Pos 0, Pos 1 #} #}\<close>
