@@ -39,6 +39,7 @@ next
   qed
 qed
 
+(*TODO: AI prettify*)
 lemma theory_implies_prop: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> theory_entails_clauses_mia P N \<Longrightarrow> theory_check_mia I P \<Longrightarrow> I \<Turnstile>sm N\<close>
 proof
   assume cons: \<open>consistent_interp I\<close> and atm: \<open>atm_of ` I = atms_of_mm N\<close> and ent: \<open>theory_entails_clauses_mia P N\<close> and in_t: \<open>theory_check_mia I P\<close>
@@ -55,7 +56,7 @@ proof
     assume A1: \<open>C \<in># N\<close>
     show \<open>\<exists>L\<in>#C. L \<in> I\<close>
     proof (rule ccontr)
-      assume \<open>\<not> (\<exists>L\<in>#C. L \<in> I)\<close>
+      assume \<open>\<not> ?thesis\<close>
       then have \<open>(\<forall>L\<in>#C. L \<notin> I)\<close> by auto
       then have H2: \<open>(\<forall>L\<in>#C. -L \<in> I)\<close> using mutual A1 using atm by (metis atm_of_in_atm_of_set_in_uminus in_implies_atm_of_on_atms_of_ms) 
       then have \<open>(\<forall>L\<in>I. holds_lit v \<beta> L)\<close> using in_t unfolding theory_check_mia_def using A1 ent 
@@ -127,25 +128,22 @@ next
     have taut: \<open>\<not>tautology ?C\<close> using assms(1) cnot consistent_CNot_not_tautology by blast 
     have tent: \<open>theory_entails_clauses_mia P {#?C#}\<close>
       unfolding theory_entails_clauses_mia_def
-    proof(intro allI)
-      fix v \<beta>
-      show \<open>sat_mf v (fst P) \<beta> (snd P) \<longrightarrow> (\<forall>C\<in>#{#uminus `# mset_set I#}. Multiset.Bex C (holds_lit v \<beta>))\<close>
-      proof (intro impI)
-        assume A2: \<open>sat_mf v (fst P) \<beta> (snd P)\<close>
-        have \<open>\<exists>L \<in># ?C. holds_lit v \<beta> L\<close>
-        proof (rule ccontr)
-          assume \<open>\<not> (\<exists>L\<in>#uminus `# mset_set I. holds_lit v \<beta> L)\<close>
-          then have \<open>(\<forall>L\<in>#?C. \<not> holds_lit v \<beta> L)\<close> by auto
-          then have \<open>(\<forall>L\<in>#?C. holds_lit v \<beta> (-L))\<close>
-            using holds_lit_neg by blast
-          then have \<open>(v, \<beta>) \<in> models_of I\<close>
-            using fin by (auto simp: models_of_def)
-          then show \<open>False\<close>
-            using A1 A2 by blast
-        qed
-        then show \<open>\<forall>C\<in>#{#uminus `# mset_set I#}. Multiset.Bex C (holds_lit v \<beta>)\<close>
-          by (metis in_multiset_nempty member_add_mset)
+    proof(intro allI impI ballI)
+      fix v \<beta> C
+      assume A2: \<open>sat_mf v (fst P) \<beta> (snd P)\<close> and
+        C: \<open>C\<in>#{#uminus `# mset_set I#}\<close>
+      have \<open>\<exists>L \<in># ?C. holds_lit v \<beta> L\<close>
+      proof (rule ccontr)
+        assume \<open>\<not> ?thesis\<close>
+        then have \<open>(\<forall>L\<in>#?C. holds_lit v \<beta> (-L))\<close>
+          using holds_lit_neg by auto
+        then have \<open>(v, \<beta>) \<in> models_of I\<close>
+          using fin by (auto simp: models_of_def)
+        then show \<open>False\<close>
+          using A1 A2 by blast
       qed
+      then show \<open>Multiset.Bex C (holds_lit v \<beta>)\<close>
+        using C by (metis in_multiset_nempty member_add_mset)
     qed
     then show \<open>\<exists>C. I \<Turnstile>s CNot C \<and> theory_entails_clauses_mia P {#C#} \<and> C \<in> simple_clss (atm_of ` I)\<close>
       using atmsub cnot dis taut by (meson distinct_mset_not_tautology_implies_in_simple_clss in_mono simple_clss_mono)
@@ -163,12 +161,7 @@ proof -
   have H2: \<open>(atm_of ` ?J = atms_of_mm N)\<close>
   proof
     show \<open>atm_of ` (I \<union> {L. atm_of L \<in> atms_of_mm N \<and> atm_of L \<notin> atm_of ` I \<and> holds_lit v \<beta> L}) \<subseteq> atms_of_mm N\<close>
-    proof
-      fix x
-      assume \<open>x \<in> atm_of ` (I \<union> {L. atm_of L \<in> atms_of_mm N \<and> atm_of L \<notin> atm_of ` I \<and> holds_lit v \<beta> L})\<close>
-      then show \<open>x \<in> atms_of_mm N\<close>
-        using assms(2) by fastforce
-    qed
+      using assms(2) by fastforce
     show \<open>atms_of_mm N \<subseteq> atm_of ` (I \<union> {L. atm_of L \<in> atms_of_mm N \<and> atm_of L \<notin> atm_of ` I \<and> holds_lit v \<beta> L})\<close>
     proof 
       fix x
