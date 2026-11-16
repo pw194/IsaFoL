@@ -1,52 +1,10 @@
-theory LocaleTestMIA
-imports CDCL_T.DPLL_T MIA_Tactic.MIA_Formula_Solver
+theory CDCL_MIA_Interp
+imports CDCL_MIA_Models
 begin
 
-term \<open>(Pos (0::nat))\<close>
-term \<open>lp_monom\<close>
-term \<open>Lit True (GT (lp_monom 2 0) 10)\<close>
+section \<open>MIA theory_problem interpretation\<close>
 
-text 
-\<open>
-  I use my own atm type. Later on we would like to have a mapping from nat/int => 'b mia_atom,
-  simply because my intuition tells me it is more efficient and more compatible with IsaSAT.
-  The mapping would then later on just contain an array that we index with the respective number,
-  to obtain the atom
-\<close>
-datatype 'b mia_atom = ArithAtom \<open>constraint\<close> | BoolAtom 'b
-
-text 
-\<open>
-  P = (Is, F) where Is is the list of integer variables and F a mia formula
-\<close>
-type_synonym 'b t_problem = \<open>(nat list) \<times> 'b mia_formula\<close>
-
-fun arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b mia_atom literal\<close> where
-  \<open>arith_atom False c = Neg (ArithAtom c)\<close> |
-  \<open>arith_atom True c = Pos (ArithAtom c)\<close>
-
-value \<open>arith_atom True (GT (lp_monom 2 0) 10) :: nat mia_atom literal\<close>
-
-fun bool_atom :: \<open>bool \<Rightarrow> 'b \<Rightarrow> 'b mia_atom literal\<close> where
-  \<open>bool_atom False x = Neg (BoolAtom x)\<close> |
-  \<open>bool_atom True x = Pos (BoolAtom x)\<close>
-
-value \<open>bool_atom True (0::nat)\<close>
-
-fun holds_atm :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom \<Rightarrow> bool\<close> where
-  \<open>holds_atm v \<beta> (ArithAtom c) = (v \<Turnstile>\<^sub>c c)\<close> |
-  \<open>holds_atm v \<beta> (BoolAtom x)  = \<beta> x\<close>
-
-fun holds_lit :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom literal \<Rightarrow> bool\<close> where
-  \<open>holds_lit v \<beta> (Pos a) = (holds_atm v \<beta> a)\<close> |
-  \<open>holds_lit v \<beta> (Neg a) = (\<not> (holds_atm v \<beta> a))\<close>
-
-text \<open>A mia model consists of a real valuation paired with a boolean assignment\<close>
-definition models_of :: \<open>'b mia_atom literal set \<Rightarrow> ((nat \<Rightarrow> real) \<times> ('b \<Rightarrow> bool)) set\<close> where
-  \<open>models_of I = {(v, \<beta>). (\<forall>L \<in> I. holds_lit v \<beta> L)}\<close>
-
-lemma models_of_in: \<open>(v, \<beta>) \<in> models_of I \<Longrightarrow> (\<forall>L\<in>I. holds_lit v \<beta> L)\<close> by (auto simp: models_of_def)
-
+subsection \<open>Model based acceptance and entailment\<close>
 text \<open>This is our \<open>I \<Turnstile>\<^sub>\<T> P\<close>\<close>
 definition theory_check_mia :: \<open>'b mia_atom literal set \<Rightarrow> 'b t_problem \<Rightarrow> bool\<close> where
   \<open>theory_check_mia I P = (\<exists>(v, \<beta>) \<in> models_of I. (sat_mf v (fst P) \<beta> (snd P)))\<close>
@@ -55,6 +13,7 @@ text \<open>This is our \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>\<clos
 definition theory_entails_clauses_mia :: \<open>'b t_problem \<Rightarrow> 'b mia_atom clauses \<Rightarrow> bool\<close> where
   \<open>theory_entails_clauses_mia P N = (\<forall>v \<beta>. sat_mf v (fst P) \<beta> (snd P) \<longrightarrow> (\<forall>C \<in># N. \<exists>L \<in># C. holds_lit v \<beta> L))\<close>
 
+subsection \<open>Lemmas needed for the interpretation\<close>
 lemma holds_lit_conflict:
   assumes pos: \<open>holds_lit v \<beta> L\<close> and neg: \<open>holds_lit v \<beta> (-L)\<close>
   shows \<open>False\<close>
@@ -132,6 +91,7 @@ next
     qed
 qed
 
+subsection \<open>The interpretation\<close>
 lemma ax1: \<open>theory_entails_clauses_mia P N \<Longrightarrow> theory_entails_clauses_mia P {#C#} \<Longrightarrow> theory_entails_clauses_mia P (add_mset C N)\<close>
   unfolding theory_entails_clauses_mia_def by auto 
 
@@ -249,6 +209,7 @@ interpretation dpll_mia: theory_problem theory_entails_clauses_mia theory_check_
   subgoal for I N P using ax4 by simp 
   done
 
+subsection \<open>Soundness\<close>
 lemma satisfiable\<^sub>\<T>_iff_sat_mf:
   assumes tent: \<open>theory_entails_clauses_mia (Is, F) N\<close>
   shows \<open>dpll_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
@@ -274,9 +235,5 @@ theorem dpll_mia_sound:
     and \<open>\<forall>S. \<not> dpll_mia.dpll\<^sub>\<T> (Is, F) (M, N) S\<close>
   shows \<open>(M \<Turnstile>asm N \<and> theory_check_mia (lits_of_l M) (Is, F)) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
   by (simp add: assms(1,2,3) dpll_mia.dpll\<^sub>\<T>_sound satisfiable\<^sub>\<T>_iff_sat_mf)
-
-
-text\<open>WIP: Simple CNF transformation + show that the transformation is entailed via \<open>\<Turnstile>\<^sub>\<T>\<^sub>s\<close>\<close>
-
 
 end

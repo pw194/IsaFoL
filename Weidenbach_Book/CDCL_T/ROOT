@@ -8,5 +8,7 @@ session CDCL_MIA in "CDCL_MIA" = MIA_Tactic +
     CDCL
     CDCL_T
   theories
+    CDCL_MIA_Models
+    CDCL_MIA_Interp
+    CDCL_MIA_Implementation
     LocaleTest
-    LocaleTestMIA
