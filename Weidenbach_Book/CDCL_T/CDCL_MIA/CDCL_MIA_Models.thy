@@ -21,13 +21,9 @@ fun arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b mia_atom
   \<open>arith_atom False c = Neg (ArithAtom c)\<close> |
   \<open>arith_atom True c = Pos (ArithAtom c)\<close>
 
-value \<open>arith_atom True (GT (lp_monom 2 0) 10) :: nat mia_atom literal\<close>
-
 fun bool_atom :: \<open>bool \<Rightarrow> 'b \<Rightarrow> 'b mia_atom literal\<close> where
   \<open>bool_atom False x = Neg (BoolAtom x)\<close> |
   \<open>bool_atom True x = Pos (BoolAtom x)\<close>
-
-value \<open>bool_atom True (0::nat)\<close>
 
 fun holds_atm :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom \<Rightarrow> bool\<close> where
   \<open>holds_atm v \<beta> (ArithAtom c) = (v \<Turnstile>\<^sub>c c)\<close> |

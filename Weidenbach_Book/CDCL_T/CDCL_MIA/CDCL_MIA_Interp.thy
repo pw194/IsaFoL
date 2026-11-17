@@ -194,7 +194,7 @@ proof -
 qed
 
 
-interpretation dpll_mia: theory_problem theory_entails_clauses_mia theory_check_mia
+interpretation theory_mia: theory_problem theory_entails_clauses_mia theory_check_mia
   apply (unfold_locales)
   subgoal for P N C using ax1 by blast
   subgoal for I N P using ax3 by blast 
@@ -205,11 +205,11 @@ interpretation dpll_mia: theory_problem theory_entails_clauses_mia theory_check_
 subsection \<open>Soundness\<close>
 lemma satisfiable\<^sub>\<T>_iff_sat_mf:
   assumes tent: \<open>theory_entails_clauses_mia (Is, F) N\<close>
-  shows \<open>dpll_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
+  shows \<open>theory_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
 proof
-  assume \<open>dpll_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N)\<close>
+  assume \<open>theory_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N)\<close>
   then show \<open>\<exists>v \<beta>. sat_mf v Is \<beta> F\<close>
-    unfolding dpll_mia.satisfiable\<^sub>\<T>_def theory_check_mia_def models_of_def by auto 
+    unfolding theory_mia.satisfiable\<^sub>\<T>_def theory_check_mia_def models_of_def by auto 
 next
   assume A1: \<open>\<exists>v \<beta>. sat_mf v Is \<beta> F\<close>
   let ?I = \<open>{}\<close>
@@ -217,16 +217,16 @@ next
   have H2: \<open>atm_of ` ?I \<subseteq> atms_of_mm N\<close> by auto
   have H3: \<open>theory_check_mia ?I (Is, F)\<close> unfolding theory_check_mia_def using A1
     by (simp add: models_of_def) 
-  then show \<open>dpll_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N)\<close>
-    using dpll_mia.theory_extendable[OF H1 H2 tent H3]
-    using assms by (metis dpll_mia.satisfiable\<^sub>\<T>_def theory_implies_prop)
+  then show \<open>theory_mia.satisfiable\<^sub>\<T> (Is, F) (set_mset N)\<close>
+    using theory_mia.theory_extendable[OF H1 H2 tent H3]
+    using assms by (metis theory_mia.satisfiable\<^sub>\<T>_def theory_implies_prop)
 qed
 
 theorem dpll_mia_sound:
-  assumes \<open>(dpll_mia.dpll\<^sub>\<T> (Is, F))\<^sup>*\<^sup>* ([], N) (M, N)\<close>
+  assumes \<open>(theory_mia.dpll\<^sub>\<T> (Is, F))\<^sup>*\<^sup>* ([], N) (M, N)\<close>
     and \<open>theory_entails_clauses_mia (Is, F) N\<close>
-    and \<open>\<forall>S. \<not> dpll_mia.dpll\<^sub>\<T> (Is, F) (M, N) S\<close>
+    and \<open>\<forall>S. \<not> theory_mia.dpll\<^sub>\<T> (Is, F) (M, N) S\<close>
   shows \<open>(M \<Turnstile>asm N \<and> theory_check_mia (lits_of_l M) (Is, F)) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
-  by (simp add: assms(1,2,3) dpll_mia.dpll\<^sub>\<T>_sound satisfiable\<^sub>\<T>_iff_sat_mf)
+  by (simp add: assms(1,2,3) theory_mia.dpll\<^sub>\<T>_sound satisfiable\<^sub>\<T>_iff_sat_mf)
 
 end
