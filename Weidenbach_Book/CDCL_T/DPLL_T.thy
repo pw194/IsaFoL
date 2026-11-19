@@ -1,7 +1,7 @@
 theory DPLL_T
 imports CDCL.DPLL_W
 begin
-
+(*TODO: Overhaul comments here due to locale change*)
 section \<open>DPLL(\<T>)\<close>
 text 
 \<open>
@@ -44,12 +44,10 @@ locale theory_problem =
     theory_check           :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 50)
 
 assumes
-    entail_add: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s add_mset C N\<close> and
-    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
-    theory_model_model_sat: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
-      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> satisfiable (set_mset N)\<close> and
-    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow>
+    theory_check_sound: \<open>I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> atms_of C \<subseteq> atm_of ` I \<Longrightarrow> I \<Turnstile> C\<close> and
+    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N 
+      \<Longrightarrow> I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
+    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow>
       I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> \<exists>J. J  \<Turnstile>\<^sub>\<T> P \<and>  I \<subseteq> J \<and> atm_of ` J = atms_of_mm N \<and> consistent_interp J\<close>
 begin
 
@@ -300,37 +298,35 @@ text
 lemma satisfiable\<^sub>\<T>_is_satisfiable: \<open>satisfiable\<^sub>\<T> P N \<Longrightarrow> satisfiable N\<close>
   using satisfiable\<^sub>\<T>_def by auto
 
-lemma entailment_closure: \<open>finite S \<Longrightarrow> (\<forall>C \<in> S. P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}) \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N + (mset_set S)\<close>
-proof (induction rule: finite.induct)
-  case emptyI
-  then show ?case by auto
-next
-  case (insertI A a)
-  then show ?case using entail_add by (metis insertCI insert_absorb mset_set.insert union_mset_add_mset_right) 
-qed
-
-lemma entailment_theory_closure: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s N + simple_clss_theory P N\<close>
-  using entailment_closure
-  using simple_clss_theory_def by (metis (lifting) add_cancel_right_right mem_Collect_eq mset_set_empty_iff) 
-
 lemma unsat_with_lemmas_not_satisfiable\<^sub>\<T>:
   assumes
-    A1: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close> and
-    A2: \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
+    A1: \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
   shows \<open>\<not> satisfiable\<^sub>\<T> P (set_mset N)\<close>
 proof
   let ?N' = \<open>set_mset N\<close>
-  assume \<open>satisfiable\<^sub>\<T> P (set_mset N)\<close>
-  then obtain I where \<open>I \<Turnstile>s ?N'\<close> 
-                and ent: \<open>I \<Turnstile>\<^sub>\<T> P\<close> 
-                and con:\<open>consistent_interp I\<close> 
-                and \<open>(atm_of ` I) = (atms_of_ms ?N')\<close>
+  assume sat: \<open>satisfiable\<^sub>\<T> P (set_mset N)\<close>
+  then obtain I where sat: \<open>I \<Turnstile>s ?N'\<close> 
+                and check: \<open>I \<Turnstile>\<^sub>\<T> P\<close> 
+                 and cons: \<open>consistent_interp I\<close> 
+                 and atms: \<open>(atm_of ` I) = (atms_of_ms ?N')\<close>
     by (auto simp: satisfiable\<^sub>\<T>_def)
-  then have atm: \<open>(atm_of ` I) = atms_of_mm (N + simple_clss_theory P N)\<close>
-    using atms_of_mm_simple_clss_theory_subset by force
-  have test: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N + simple_clss_theory P N\<close> by (rule entailment_theory_closure[OF A1])
+  then obtain C where C: \<open>C \<in> (set_mset (N + simple_clss_theory P N))\<close> 
+                  and conf: \<open>\<not> (I \<Turnstile> C)\<close>
+                  and mutual: \<open>C \<in># N \<or> C \<in># simple_clss_theory P N\<close>
+    using assms by (meson satisfiable_carac true_clss_def union_iff) 
   then show \<open>False\<close>
-    using theory_model_model_sat[OF con atm test ent] A2 by auto
+  proof (elim disjE)
+    assume \<open>\<not> I \<Turnstile> C\<close> and \<open>C \<in># N\<close>
+    then show \<open>False\<close>
+      using sat true_clss_def by blast 
+  next
+    assume cnot: \<open>\<not> I \<Turnstile> C\<close> and simple: \<open>C \<in># simple_clss_theory P N\<close>
+    then have tent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {# C #}\<close>
+      using set_mset_simple_clss_theory by auto
+    then show \<open>False\<close>
+      using cnot theory_check_sound[OF check tent] atms 
+          set_mset_simple_clss_theory simple simple_clssE by fastforce 
+  qed
 qed
 
 text 
@@ -442,7 +438,6 @@ lemma dpll\<^sub>W_all_inv_state\<^sub>\<T>_init: \<open>dpll\<^sub>W_all_inv (s
 
 lemma dpll\<^sub>\<T>_conclusive_state_correct:
   assumes run: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close> 
-          and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>
           and concl: \<open>conclusive_dpll\<^sub>\<T>_state P (M, N)\<close>
   shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close> (is \<open>?A \<longleftrightarrow> ?B\<close>) (*This way of abbreviating was new to me*)
 proof -
@@ -459,7 +454,7 @@ proof -
     using inv apply fastforce
     using atms_of_mm_state\<^sub>\<T>_clauses_equals inv state\<^sub>\<T>_trail_equals_state by (metis dpll\<^sub>W_all_inv_dest(2) fst_eqD snd_eqD)  
   then show \<open>?B\<close>
-    unfolding satisfiable\<^sub>\<T>_def using A theory_extendable[OF cons atm ent t_ent]
+    unfolding satisfiable\<^sub>\<T>_def using A theory_extendable[OF cons atm t_ent]
     by (metis true_annots_true_cls true_clss_mono_left) 
 next
   assume B: \<open>?B\<close>
@@ -474,11 +469,11 @@ next
      C_in: \<open>C \<in># N + simple_clss_theory P N\<close> and
      C_confl: \<open>trail (M, N) \<Turnstile>as CNot C\<close>
       by auto
-    have \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
+    have H: \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
       using only_propagated_vars_unsat[OF undec C_in C_confl] inv
       using state\<^sub>\<T>_clauses_equals_clauses state\<^sub>\<T>_trail_equals_state by (metis dpll\<^sub>W_all_inv_dest(1,2) split_pairs2) 
     then show \<open>False\<close>
-      using unsat_with_lemmas_not_satisfiable\<^sub>\<T>[OF ent] B
+      using unsat_with_lemmas_not_satisfiable\<^sub>\<T>[OF H] B
       by auto 
       qed
     qed
@@ -492,7 +487,6 @@ text
 \<close>
 lemma dpll\<^sub>\<T>_sound:
   assumes run\<^sub>\<T>: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close>
-      and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>
       and final: \<open>\<forall>S. \<not> dpll\<^sub>\<T> P (M, N) S\<close>
   shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close>
 proof -
@@ -503,9 +497,9 @@ proof -
   then have \<open>conclusive_dpll\<^sub>\<T>_state P (M, N)\<close>
     by (rule dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state[OF final])
   then show ?thesis
-    by (rule dpll\<^sub>\<T>_conclusive_state_correct[OF run\<^sub>\<T> ent])
+    by (rule dpll\<^sub>\<T>_conclusive_state_correct[OF run\<^sub>\<T>])
 qed
-    
+
 end
 
 end

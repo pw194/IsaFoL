@@ -2,20 +2,17 @@ theory CDCL_MIA_Models
   imports CDCL_T.DPLL_T MIA_Tactic.MIA_Formula_Solver
 begin
 
+section \<open>MIA Atoms\<close>
 text 
 \<open>
-  I use my own atm type. Later on we would like to have a mapping from nat/int => 'b mia_atom,
+  I use my own atom type. Later on we would like to have a mapping from nat/int <=> 'b mia_atom,
   simply because my intuition tells me it is more efficient and more compatible with IsaSAT.
-  The mapping would then later on just contain an array that we index with the respective number,
-  to obtain the atom
+  A MIA atom is either a propositional variable or a mixed arithmetic constraint.
 \<close>
 datatype 'b mia_atom = ArithAtom \<open>constraint\<close> | BoolAtom 'b
 
-text 
-\<open>
-  P = (Is, F) where Is is the list of integer variables and F a mia formula
-\<close>
-type_synonym 'b t_problem = \<open>(nat list) \<times> 'b mia_formula\<close>
+text \<open>P = Is, where Is is the set of variables that are constrained to \<int>\<close>
+type_synonym mia_problem = \<open>(var set)\<close>
 
 fun arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b mia_atom literal\<close> where
   \<open>arith_atom False c = Neg (ArithAtom c)\<close> |
@@ -32,12 +29,5 @@ fun holds_atm :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<R
 fun holds_lit :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom literal \<Rightarrow> bool\<close> where
   \<open>holds_lit v \<beta> (Pos a) = (holds_atm v \<beta> a)\<close> |
   \<open>holds_lit v \<beta> (Neg a) = (\<not> (holds_atm v \<beta> a))\<close>
-
-text \<open>A mia model consists of a real valuation paired with a boolean assignment\<close>
-definition models_of :: \<open>'b mia_atom literal set \<Rightarrow> ((nat \<Rightarrow> real) \<times> ('b \<Rightarrow> bool)) set\<close> where
-  \<open>models_of I = {(v, \<beta>). (\<forall>L \<in> I. holds_lit v \<beta> L)}\<close>
-
-lemma models_of_in: \<open>(v, \<beta>) \<in> models_of I \<Longrightarrow> (\<forall>L\<in>I. holds_lit v \<beta> L)\<close> by (auto simp: models_of_def)
-
 
 end
