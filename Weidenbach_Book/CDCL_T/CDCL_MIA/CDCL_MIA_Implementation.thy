@@ -89,12 +89,7 @@ definition cnf :: \<open>'b mia_formula \<Rightarrow> 'b mia_atom clauses\<close
 lemma cnf_correct: \<open>sat_mf_struct v \<beta> F \<longleftrightarrow> (\<forall>C \<in># cnf F. \<exists>L \<in># C. holds_lit v \<beta> L)\<close>
   by (auto simp: cnf_def to_cnf_correct holds_cnf_def)
 
-text \<open>We want to show that going from F to N, we have that \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>\<close>
-lemma cnf_entailed: \<open>theory_entails_clauses_mia (Is, F) (cnf F)\<close>
-  unfolding theory_entails_clauses_mia_def by (auto simp: sat_mf_def cnf_correct)
-
 subsection \<open>The \<T>_solver\<close>
-
 fun constraint_list_of :: \<open>'b mia_atom literal list \<Rightarrow> constraint list\<close> where
   \<open>constraint_list_of [] = []\<close> |
   \<open>constraint_list_of (x#xs) = (case x of 
@@ -105,23 +100,121 @@ fun constraint_list_of :: \<open>'b mia_atom literal list \<Rightarrow> constrai
           EQ p r \<Rightarrow> constraint_list_of xs |
           _ \<Rightarrow> negate_ineq c # constraint_list_of xs))\<close>
 
+lemma constraint_list_of_correct:
+  assumes \<open>(\<forall>L \<in> set Ms. holds_lit v \<beta> L)\<close>
+  shows \<open>(\<forall>c \<in> set (constraint_list_of Ms). v \<Turnstile>\<^sub>c c)\<close>
+  using assms proof (induction Ms)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a Ms)
+  then show ?case 
+    by (auto split: literal.splits mia_atom.splits constraint.splits)
+qed
+
+lemma constraint_list_to_correct:
+  assumes \<open>\<forall>c' \<in> set (constraint_list_of Ms). v \<Turnstile>\<^sub>c c'\<close>
+    and \<open>L \<in> set Ms\<close> and \<open>atm_of L = ArithAtom c\<close> and \<open>\<forall>p r. c \<noteq> EQ p r\<close>
+  shows \<open>holds_lit v \<beta> L\<close>
+  using assms proof (induction Ms)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a Ms)
+  then show ?case 
+    by (auto split: literal.splits mia_atom.splits constraint.splits)
+qed
+
+lemma constraint_list_of_pos_mem:
+  \<open>Pos (ArithAtom c) \<in> set Ms \<Longrightarrow> c \<in> set (constraint_list_of Ms)\<close>
+  by (induction Ms) (auto split: literal.splits mia_atom.splits constraint.splits)
+
 definition dpll_mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
   \<open>dpll_mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
 thm mixed_cs_solver_sat
 thm mixed_cs_solver_unsat
-lemma \<T>_solver_rejection: \<open>\<not> dpll_mia_\<T>_solver c (int_vars_of_list Is) Ms \<Longrightarrow> \<not> theory_check_mia (set Ms) (Is, F)\<close>
-proof
-  assume A1: \<open>\<not> dpll_mia_\<T>_solver c (int_vars_of_list Is) Ms\<close> and A2: \<open>theory_check_mia (set Ms) (Is, F)\<close>
-  then have solver_none: \<open>(mixed_cs_solver c (constraint_list_of Ms) (int_vars_of_list Is)) = None\<close>
-    by (meson Option.is_none_def dpll_mia_\<T>_solver_def)
-  have \<open>\<And>v. \<not> v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set (int_vars_of_list Is))\<close> 
-            and \<open>\<And>w. \<not> w \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set (int_vars_of_list Is))\<close>
-    using mixed_cs_solver_unsat(1,2) solver_none by blast+
+
+lemma \<T>_solver_rejection: 
+  assumes A1: \<open>\<not> dpll_mia_\<T>_solver c Is Ms\<close>
+  shows \<open>\<not> theory_check_mia (set Ms) (int_vars_set Is)\<close>
+proof 
+  have unsatV: \<open>\<And>v. \<not> v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close> 
+               and unsatW: \<open>\<And>w. \<not> w \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
+    using A1 unfolding dpll_mia_\<T>_solver_def
+    apply (meson Option.is_none_def mixed_cs_solver_unsat(1))
+    using A1 by (metis Option.is_none_def dpll_mia_\<T>_solver_def mixed_cs_solver_unsat(2))
+  assume \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+  then obtain v \<beta> where integral: \<open>(wf_integral v (int_vars_set Is))\<close> 
+                  and holds: \<open>(\<forall>L \<in> (set Ms). holds_lit v \<beta> L)\<close>
+    by (auto simp: theory_check_mia_def) 
   then show \<open>False\<close> 
-     using A2 unfolding theory_check_mia_def sat_mf_def 
-     oops (*TODO*)
- 
+    using A1 unfolding theory_check_mia_def
+    using constraint_list_of_correct unsatW by fastforce
+qed
+
+lemma \<T>_solver_acceptance:
+  assumes cons: \<open>consistent_interp (set Ms)\<close> 
+     and check: \<open>dpll_mia_\<T>_solver c Is Ms\<close>
+  shows \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+proof -
+  define \<beta> where \<open>\<beta> = (\<lambda>b. Pos (BoolAtom b) \<in> set Ms)\<close>
+  obtain v where val1: \<open>v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), (int_vars_set Is))\<close> and
+                 val2: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
+    using check by (metis dpll_mia_\<T>_solver_def is_none_code(1) mixed_cs_solver_sat(1) mixed_rat_sol_imp_mixed_real_sol option.exhaust)
+  have \<beta>_pos: \<open>holds_lit (of_rat_val v) \<beta> (Pos (BoolAtom b))\<close>
+    if \<open>Pos (BoolAtom b) \<in> set Ms\<close> for b
+    using that by (simp add: \<beta>_def)
+  have \<beta>_neg: \<open>holds_lit (of_rat_val v) \<beta> (Neg (BoolAtom b))\<close>
+    if \<open>Neg (BoolAtom b) \<in> set Ms\<close> for b
+    using that cons by (auto simp: \<beta>_def consistent_interp_def)
+  have sat: \<open>\<forall>c \<in> set (constraint_list_of Ms). of_rat_val v \<Turnstile>\<^sub>c c\<close>
+    using val2 by simp
+  show \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+    unfolding theory_check_mia_def 
+  proof (intro exI[of _ \<open>of_rat_val v\<close>], rule exI[of _ \<beta>], intro conjI)
+    show \<open>wf_integral (of_rat_val v) (int_vars_set Is)\<close>
+      using val1 val2 satisfies_real_mixed_constraints.simps by auto 
+  next
+    show \<open>Ball (set Ms) (holds_lit (of_rat_val v) \<beta>)\<close>
+    proof
+      fix x
+      assume \<open>x \<in> set Ms\<close>
+      then show \<open>holds_lit (of_rat_val v) \<beta> x\<close> 
+      proof (induction x)
+        case (Pos y)
+        then show ?case
+          proof (induction y)
+            case (ArithAtom c)
+            then show ?case
+              by (simp add: constraint_list_of_pos_mem sat) 
+          next
+            case (BoolAtom x)
+            then show ?case
+              using \<beta>_pos by auto 
+          qed
+      next
+        case (Neg y)
+        then show ?case proof (induction y)
+          case (ArithAtom c)
+          then show ?case 
+          proof (cases \<open>\<exists>p r. c = EQ p r\<close>)
+            case True
+            then show ?thesis sorry
+          next
+            case False
+            then show ?thesis
+              using ArithAtom.prems sat by (meson constraint_list_to_correct literal.sel(2)) 
+          qed
+        next
+          case (BoolAtom x)
+          then show ?case
+            using \<beta>_neg by auto 
+        qed
+      qed
+    qed
+  qed
+qed
 
 subsection \<open>Top level procedure\<close>
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where

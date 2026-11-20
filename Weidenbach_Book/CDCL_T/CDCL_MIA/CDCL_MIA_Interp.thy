@@ -25,51 +25,62 @@ definition theory_entails_clauses_mia :: \<open>mia_problem \<Rightarrow> 'b mia
 
 subsection \<open>Lemmas needed for the interpretation\<close>
 lemma holds_lit_conflict:
-  assumes pos: \<open>holds_lit v \<beta> L\<close> and neg: \<open>holds_lit v \<beta> (-L)\<close>
+  assumes \<open>holds_lit v \<beta> L\<close> and \<open>holds_lit v \<beta> (-L)\<close>
   shows \<open>False\<close>
   using assms
-proof (induction L)
-  case (Pos x)
-  then show ?case 
-  proof (cases x)
+proof (cases L)
+  case (Pos x1)
+  then show ?thesis
+  proof (cases x1)
     case (ArithAtom x1)
-    then show ?thesis using Pos by auto
+    then show ?thesis
+      using Pos assms by auto 
   next
     case (BoolAtom x2)
-    then show ?thesis using Pos by auto
+    then show ?thesis 
+      using Pos assms by auto 
   qed
 next
-  case (Neg x)
-  then show ?case proof (cases x)
+  case (Neg x2)
+  then show ?thesis
+  proof (cases x2)
     case (ArithAtom x1)
-    then show ?thesis using Neg by auto
+    then show ?thesis 
+      using Neg assms by auto 
   next
     case (BoolAtom x2)
-    then show ?thesis using Neg by auto
+    then show ?thesis
+       using Neg assms by auto 
   qed
 qed
 
-lemma holds_lit_neg: \<open>\<not> holds_lit v \<beta> L \<Longrightarrow> holds_lit v \<beta> (-L)\<close>
-proof (induction L)
-  case (Pos x)
-  then show ?case
-    proof (cases x)
-      case (ArithAtom x1)
-      then show ?thesis using Pos by auto
-    next
-      case (BoolAtom x2)
-      then show ?thesis using Pos by auto
-    qed
+lemma holds_lit_neg: 
+  assumes \<open>\<not> holds_lit v \<beta> L\<close>
+  shows \<open>holds_lit v \<beta> (-L)\<close>
+proof (cases L)
+  case (Pos x1)
+  then show ?thesis
+  proof (cases x1)
+    case (ArithAtom x1)
+    then show ?thesis
+      using Pos assms by auto 
+  next
+    case (BoolAtom x2)
+    then show ?thesis 
+      using Pos assms by auto 
+  qed
 next
-  case (Neg x)
-  then show ?case
-    proof (cases x)
-      case (ArithAtom x1)
-      then show ?thesis using Neg by auto
-    next
-      case (BoolAtom x2)
-      then show ?thesis using Neg by auto
-    qed
+  case (Neg x2)
+  then show ?thesis
+  proof (cases x2)
+    case (ArithAtom x1)
+    then show ?thesis 
+      using Neg assms by auto 
+  next
+    case (BoolAtom x2)
+    then show ?thesis
+       using Neg assms by auto 
+  qed
 qed
 
 lemma holds_lit_valid: \<open>holds_lit v \<beta> L \<or> holds_lit v \<beta> (- L)\<close>
