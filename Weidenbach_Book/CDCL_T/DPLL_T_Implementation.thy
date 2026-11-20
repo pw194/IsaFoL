@@ -97,9 +97,10 @@ next
     using inv by auto 
 qed
 
+thm backtrack_snd_empty_not_decided
 term lits_of_l
 lemma DPLL_T_step_stuck_conclusive:
-  assumes stuck: \<open>DPLL_T_step \<T>_solver (Ms, N) = (Ms, N)\<close>
+  assumes stuck: \<open>(Ms, N) = DPLL_T_step \<T>_solver (Ms, N)\<close>
     and inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close>
     and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
                    atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
@@ -108,7 +109,7 @@ lemma DPLL_T_step_stuck_conclusive:
 proof-
   have lits: \<open>set (map lit_of Ms) = lits_of_l Ms\<close>
     by (simp add: lits_of_def) 
-  have \<open>DPLL_step (Ms, N) = (Ms, N)\<close>
+  have stepW: \<open>DPLL_step (Ms, N) = (Ms, N)\<close>
     using stuck unfolding DPLL_T_step_def apply (auto split: prod.split)
     by (smt (verit, best) DPLL_step_obtains case_prod_conv)
   then have \<open>conclusive_dpll\<^sub>W_state (toS Ms N)\<close>
@@ -130,12 +131,28 @@ proof-
       case True
       then show ?thesis
         using A1 conclusive_dpll\<^sub>\<T>_state_def lits solver_iff by fastforce 
-    next
-      have no_dec: \<open>\<forall>L\<in>set (trail (toS Ms N)). \<not> is_decided L\<close>
-        sorry 
+    next   
       case False
-      then have \<open>\<not> set (map lit_of Ms) \<Turnstile>\<^sub>\<T> P\<close>
-        using solver_iff by auto
+      have no_dec: \<open>\<forall>L\<in>set (trail (toS Ms N)). \<not> is_decided L\<close>
+      proof -
+        obtain M M' where bt: \<open>backtrack_split Ms = (M, M')\<close>
+          using prod.exhaust_sel by blast
+        have \<open>M' = []\<close>
+        proof (rule ccontr)
+          assume \<open>M' \<noteq> []\<close>
+          then obtain L M'' where \<open>M' = (L # M'')\<close> and \<open>is_decided L\<close>
+            using bt by (metis backtrack_split_snd_hd_decided list.exhaust list.sel(1) snd_eqD)  
+          then have \<open>DPLL_T_step \<T>_solver (Ms, N) \<noteq> (Ms, N)\<close>
+            using bt inv stepW False unfolding DPLL_T_step_def apply (auto split: prod.split)
+            by (metis append_Cons backtrack_split_list_eq list.distinct(1) self_append_conv2 snd_apfst snd_eqD) 
+          then show \<open>False\<close>
+            using stuck by auto 
+        qed
+        then show ?thesis
+          using backtrack_snd_empty_not_decided bt by auto  
+      qed
+      have \<open>\<not> set (map lit_of Ms) \<Turnstile>\<^sub>\<T> P\<close>
+        using False solver_iff by auto
       then have \<open>\<not> lits_of_l Ms \<Turnstile>\<^sub>\<T> P\<close>
         using lits by auto
       then obtain C where cnot: \<open>(Ms \<Turnstile>as CNot C)\<close> \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#})\<close> \<open>(C \<in> simple_clss (atm_of ` lits_of_l Ms))\<close>
@@ -159,12 +176,25 @@ proof-
     qed
   qed
 qed
-        
+
+
+lemma DPLL_T_partial_inv_fix:
+  assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS M N))\<close>
+      and run: \<open>(M', N') = DPLL_T_partial \<T>_solver (M, N)\<close>
+      and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
+              atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
+              \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+  shows \<open>DPLL_T_step \<T>_solver (M', N') = (M', N')\<close> \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (M, N)) (toS' (M', N'))\<close> \<open>N = N'\<close>
+  sorry
     
-theorem dpll_T_partial_correct:
-  assumes \<open>True\<close>
-  shows \<open>True\<close>
-  by auto
+theorem DPLL_T_partial_correct:
+  assumes run: \<open>(Ms, N') = DPLL_T_partial \<T>_solver ([], N)\<close>
+    and state: \<open>(M, N'') = toS Ms N'\<close>
+   and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
+                atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
+                \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+  shows \<open>(M \<Turnstile>asm N'' \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N'')\<close>
+  sorry
 
 end
 

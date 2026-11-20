@@ -135,7 +135,7 @@ definition dpll_mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow>
 thm mixed_cs_solver_sat
 thm mixed_cs_solver_unsat
 
-lemma \<T>_solver_rejection: 
+lemma mia_\<T>_solver_rejection: 
   assumes A1: \<open>\<not> dpll_mia_\<T>_solver c Is Ms\<close>
   shows \<open>\<not> theory_check_mia (set Ms) (int_vars_set Is)\<close>
 proof 
@@ -153,9 +153,10 @@ proof
     using constraint_list_of_correct unsatW by fastforce
 qed
 
-lemma \<T>_solver_acceptance:
+lemma mia_\<T>_solver_acceptance:
   assumes cons: \<open>consistent_interp (set Ms)\<close> 
      and check: \<open>dpll_mia_\<T>_solver c Is Ms\<close>
+     and no_EQ: \<open>\<forall>L \<in> set Ms. \<forall>p r. atm_of L \<noteq> ArithAtom (EQ p r)\<close>
   shows \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
 proof -
   define \<beta> where \<open>\<beta> = (\<lambda>b. Pos (BoolAtom b) \<in> set Ms)\<close>
@@ -200,7 +201,8 @@ proof -
           then show ?case 
           proof (cases \<open>\<exists>p r. c = EQ p r\<close>)
             case True
-            then show ?thesis sorry
+            then show ?thesis
+              using ArithAtom.prems no_EQ by auto 
           next
             case False
             then show ?thesis
