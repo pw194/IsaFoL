@@ -30,4 +30,10 @@ fun holds_lit :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<R
   \<open>holds_lit v \<beta> (Pos a) = (holds_atm v \<beta> a)\<close> |
   \<open>holds_lit v \<beta> (Neg a) = (\<not> (holds_atm v \<beta> a))\<close>
 
+fun lit_to_mf :: \<open>'b mia_atom literal \<Rightarrow> 'b mia_formula\<close> where
+  \<open>lit_to_mf (Pos (ArithAtom c)) = Lit True c\<close>
+| \<open>lit_to_mf (Neg (ArithAtom c)) = Lit False c\<close>
+| \<open>lit_to_mf (Pos (BoolAtom b)) = BVar True b\<close>
+| \<open>lit_to_mf (Neg (BoolAtom b)) = BVar False b\<close>
+
 end

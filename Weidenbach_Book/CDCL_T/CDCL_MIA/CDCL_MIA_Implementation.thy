@@ -129,21 +129,21 @@ lemma constraint_list_of_pos_mem:
   \<open>Pos (ArithAtom c) \<in> set Ms \<Longrightarrow> c \<in> set (constraint_list_of Ms)\<close>
   by (induction Ms) (auto split: literal.splits mia_atom.splits constraint.splits)
 
-definition dpll_mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
-  \<open>dpll_mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
+definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
+  \<open>mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
 thm mixed_cs_solver_sat
 thm mixed_cs_solver_unsat
 
 lemma mia_\<T>_solver_rejection: 
-  assumes A1: \<open>\<not> dpll_mia_\<T>_solver c Is Ms\<close>
+  assumes A1: \<open>\<not> mia_\<T>_solver c Is Ms\<close>
   shows \<open>\<not> theory_check_mia (set Ms) (int_vars_set Is)\<close>
 proof 
   have unsatV: \<open>\<And>v. \<not> v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close> 
                and unsatW: \<open>\<And>w. \<not> w \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
-    using A1 unfolding dpll_mia_\<T>_solver_def
+    using A1 unfolding mia_\<T>_solver_def
     apply (meson Option.is_none_def mixed_cs_solver_unsat(1))
-    using A1 by (metis Option.is_none_def dpll_mia_\<T>_solver_def mixed_cs_solver_unsat(2))
+    using A1 by (metis Option.is_none_def mia_\<T>_solver_def mixed_cs_solver_unsat(2))
   assume \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
   then obtain v \<beta> where integral: \<open>(wf_integral v (int_vars_set Is))\<close> 
                   and holds: \<open>(\<forall>L \<in> (set Ms). holds_lit v \<beta> L)\<close>
@@ -155,14 +155,14 @@ qed
 
 lemma mia_\<T>_solver_acceptance:
   assumes cons: \<open>consistent_interp (set Ms)\<close> 
-     and check: \<open>dpll_mia_\<T>_solver c Is Ms\<close>
+     and check: \<open>mia_\<T>_solver c Is Ms\<close>
      and no_EQ: \<open>\<forall>L \<in> set Ms. \<forall>p r. atm_of L \<noteq> ArithAtom (EQ p r)\<close>
   shows \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
 proof -
   define \<beta> where \<open>\<beta> = (\<lambda>b. Pos (BoolAtom b) \<in> set Ms)\<close>
   obtain v where val1: \<open>v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), (int_vars_set Is))\<close> and
                  val2: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
-    using check by (metis dpll_mia_\<T>_solver_def is_none_code(1) mixed_cs_solver_sat(1) mixed_rat_sol_imp_mixed_real_sol option.exhaust)
+    using check by (metis mia_\<T>_solver_def is_none_code(1) mixed_cs_solver_sat(1) mixed_rat_sol_imp_mixed_real_sol option.exhaust)
   have \<beta>_pos: \<open>holds_lit (of_rat_val v) \<beta> (Pos (BoolAtom b))\<close>
     if \<open>Pos (BoolAtom b) \<in> set Ms\<close> for b
     using that by (simp add: \<beta>_def)
@@ -222,24 +222,51 @@ subsection \<open>Top level procedure\<close>
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
 
+lemma mia_solver_iff:
+  assumes \<open>N = preprocess_formula (int_vars_set II) F\<close>
+  shows \<open>consistent_interp (set Ms) \<Longrightarrow> atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
+         mia_\<T>_solver c II Ms \<longleftrightarrow> theory_check_mia (set Ms) (int_vars_set II)\<close>
+  sorry
+
+lemma translation_correct:
+  \<open>theory_mia.satisfiable\<^sub>\<T> (set Is)
+     (set_mset (mset (map mset (preprocess_formula (set Is) F)))) \<longleftrightarrow> (\<exists>v \<beta>. sat_mf v Is \<beta> F)\<close>
+  sorry
+
 (*MIA_Formula.sat_tighten_mf: \<forall>x\<in>?I. ?v x \<in> \<int> \<Longrightarrow> sat_mf_struct ?v ?\<beta> (tighten_mf ?I ?f) = sat_mf_struct ?v ?\<beta> ?f*)
-lemma \<open>(\<forall>x \<in> I. v x \<in> \<int>) \<Longrightarrow> sat_mf_struct v \<beta> F \<longleftrightarrow> holds_cnf v \<beta> (preprocess_formula I F)\<close>
+lemma preprocess_formula_correct: \<open>(\<forall>x \<in> I. v x \<in> \<int>) \<Longrightarrow> sat_mf_struct v \<beta> F \<longleftrightarrow> holds_cnf v \<beta> (preprocess_formula I F)\<close>
   by (metis preprocess_formula_def remove_equalities_correct sat_tighten_mf to_cnf_correct)
 
 definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>dpll_mia c Is F = (let II = int_vars_of_list Is;
                           I = int_vars_set II;
                           N = (preprocess_formula I F) in
-                          (let (M, _) = (DPLL_T_partial (dpll_mia_\<T>_solver c II) ([], N));
-                              Ls = map lit_of M in if \<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ls
-                                  then map_option (\<lambda>w. (w, \<lambda>b. Pos (BoolAtom b) \<in> set Ls))
-                                      (mixed_cs_solver c (constraint_list_of Ls) II) else None))\<close>
+                          (let (M, _) = (DPLL_T_partial (mia_\<T>_solver c II) ([], N));
+                              Ms = map lit_of M in if \<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms
+                                  then map_option (\<lambda>w. (w, \<lambda>b. Pos (BoolAtom b) \<in> set Ms))
+                                      (mixed_cs_solver c (constraint_list_of Ms) II) else None))\<close>
 
+subsection \<open>Final theorems\<close>
 theorem dpll_mia_formula_sat: 
   assumes "dpll_mia c Is F = Some (v, \<beta>)"
   shows "sat_mf (of_rat_val v) Is \<beta> F"
-  sorry
-  
+proof -
+  define II where \<open>II = int_vars_of_list Is\<close>
+  define I where \<open>I = int_vars_set II\<close>
+  define N where \<open>N = (preprocess_formula I F)\<close>
+  obtain M N' where run: \<open>(M, N') = (DPLL_T_partial (mia_\<T>_solver c II) ([], N))\<close>
+    by (metis prod.exhaust)
+  define Ms where \<open>Ms = map lit_of M\<close>
+  have model: \<open>\<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms\<close>
+   and beta: \<open>\<beta> = (\<lambda>b. Pos (BoolAtom b) \<in> set Ms)\<close>
+    and Val: \<open>Some v = mixed_cs_solver c (constraint_list_of Ms) II\<close>
+    using assms run[symmetric]
+    unfolding dpll_mia_def
+    by (auto simp: Let_def II_def[symmetric] I_def[symmetric] N_def[symmetric] Ms_def
+             split: if_splits prod.splits)
+  show \<open>sat_mf (of_rat_val v) Is \<beta> F\<close>
+    unfolding sat_mf_def  sorry
+qed
 
 theorem decide_mia_formula_unsat: 
   assumes "dpll_mia c Is f = None"

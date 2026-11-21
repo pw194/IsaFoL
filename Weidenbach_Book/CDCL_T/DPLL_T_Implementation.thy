@@ -184,8 +184,9 @@ lemma DPLL_T_partial_inv_fix:
       and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
               atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
               \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
-  shows \<open>DPLL_T_step \<T>_solver (M', N') = (M', N')\<close> \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (M, N)) (toS' (M', N'))\<close> \<open>N = N'\<close>
+  shows \<open>(M', N') = DPLL_T_step \<T>_solver (M', N')\<close> \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (M, N)) (toS' (M', N'))\<close> \<open>N = N'\<close>
   sorry
+
     
 theorem DPLL_T_partial_correct:
   assumes run: \<open>(Ms, N') = DPLL_T_partial \<T>_solver ([], N)\<close>
@@ -194,7 +195,19 @@ theorem DPLL_T_partial_correct:
                 atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
                 \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
   shows \<open>(M \<Turnstile>asm N'' \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N'')\<close>
-  sorry
+proof -
+  have 1: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS [] N))\<close>
+    using rtranclp_dpll\<^sub>W_inv_starting_from_0 by fastforce
+  have final: \<open>(Ms, N') = DPLL_T_step \<T>_solver (Ms, N') \<close>  
+      and abs: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' ([], N)) (toS' (Ms, N'))\<close> 
+      and same_clss: \<open>N = N'\<close>
+    using DPLL_T_partial_inv_fix[OF 1 run] solver by blast+
+  then have \<open>conclusive_dpll\<^sub>\<T>_state P (toS Ms N')\<close>
+    using DPLL_T_step_stuck_conclusive[OF final] solver 1 dpll\<^sub>\<T>_inv_rtranclp by force
+  then show ?thesis
+    using dpll\<^sub>\<T>_conclusive_state_correct[of P] abs same_clss state
+    by fastforce 
+qed
 
 end
 
