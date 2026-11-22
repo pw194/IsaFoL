@@ -1,8 +1,13 @@
 theory CDCL_MIA_Interp
-imports CDCL_MIA_Models
+imports CDCL_MIA_Atoms
 begin
 
 section \<open>MIA theory_problem interpretation\<close>
+text 
+\<open>
+  The purpose of this file is to instantiate the theory_problem locale with the MIA theory.
+  This gives us the correctness of abstract DPLL(\<T>) instantiated to abstract DPLL(MIA).
+\<close>
 
 subsection \<open>Integral constraint\<close>
 text \<open>Since we require this constraint a lot for the mixed formulas, I will use an abbreviation
@@ -11,19 +16,20 @@ text \<open>Since we require this constraint a lot for the mixed formulas, I wil
 abbreviation wf_integral :: \<open>(nat \<Rightarrow> real) \<Rightarrow> var set \<Rightarrow> bool\<close> where
   \<open>wf_integral v Is \<equiv> (\<forall>x \<in> Is. v x \<in> \<int>)\<close>
 
-subsection \<open>Model based acceptance and entailment\<close>
+subsection \<open>Consistency and entailment\<close>
 text \<open>This is our \<open>I \<Turnstile>\<^sub>\<T> P\<close>. It models asking the \<T>-solver for the consistency of
       a set of theory literals (which implicitly means the consistency of the conjunction of
       theory literals).\<close>
 definition theory_check_mia :: \<open>'b mia_atom literal set \<Rightarrow> mia_problem \<Rightarrow> bool\<close> where
   \<open>theory_check_mia I P = (\<exists>v \<beta>. (wf_integral v P) \<and> (\<forall>L \<in> I. holds_lit v \<beta> L))\<close>
 
-text \<open>This is our \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>. A clause set N is entailed by P if all the clauses in it are
-      theory valid.\<close>
+text \<open>This is our \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>. A clause set N is valis with respect to  P if all the clauses in 
+      it are valid in the theory.\<close>
 definition theory_entails_clauses_mia :: \<open>mia_problem \<Rightarrow> 'b mia_atom clauses \<Rightarrow> bool\<close> where
   \<open>theory_entails_clauses_mia P N = (\<forall>v \<beta>. (wf_integral v P) \<longrightarrow> (\<forall>C \<in># N. \<exists>L \<in># C. holds_lit v \<beta> L))\<close>
 
 subsection \<open>Lemmas needed for the interpretation\<close>
+text \<open>Interpreting the locale gave rise to some helper lemmas which were useful for the proofs\<close>
 lemma holds_lit_conflict:
   assumes \<open>holds_lit v \<beta> L\<close> and \<open>holds_lit v \<beta> (-L)\<close>
   shows \<open>False\<close>
@@ -118,7 +124,7 @@ proof
 qed
 
 subsection \<open>The interpretation\<close>
-
+text \<open>The locale axioms are shown in order of appearance\<close>
 lemma ax1:
   assumes check: \<open>theory_check_mia I P\<close> 
        and tent: \<open>theory_entails_clauses_mia P {#C#}\<close> 
@@ -126,7 +132,7 @@ lemma ax1:
   shows \<open>I \<Turnstile> C\<close>
 proof(rule ccontr)
   obtain v \<beta> where integral: \<open>(wf_integral v P)\<close> and holds: \<open>(\<forall>L \<in> I. holds_lit v \<beta> L)\<close>
-    using assms(1) by (auto simp: theory_check_mia_def)
+    using check by (auto simp: theory_check_mia_def)
   then have ex: \<open>\<exists>L \<in># C. holds_lit v \<beta> L\<close>
     using tent unfolding theory_entails_clauses_mia_def
     by auto 
@@ -235,6 +241,11 @@ interpretation theory_mia: theory_problem theory_entails_clauses_mia theory_chec
 thm theory_mia.dpll\<^sub>\<T>_sound
 
 subsection \<open>Soundness\<close>
+text 
+\<open>
+  We can now establish an equivalence between the notion of theory satisfaction of a clause set \<open>N\<close> 
+  and the satisfaction of the literals over the theory. 
+\<close>
 lemma satisfiable\<^sub>\<T>_iff_model: \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N) 
                               \<longleftrightarrow> (\<exists>v \<beta>. wf_integral v P \<and> (\<forall>C \<in># N. (\<exists>L \<in># C. holds_lit v \<beta> L)))\<close>
 proof 
@@ -290,7 +301,7 @@ next
         then show ?thesis
           by (metis (no_types, lifting) literal.sel(1) rev_image_eqI) 
       next
-                case False
+        case False
         then have \<open>holds_lit v \<beta> (Neg x)\<close>
           using holds_lit_neg[of v \<beta> \<open>Pos x\<close>] by simp
         then have \<open>Neg x \<in> {L |L. atm_of L \<in> atms_of_mm N \<and> holds_lit v \<beta> L}\<close>

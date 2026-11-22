@@ -3,7 +3,18 @@ imports CDCL.DPLL_W_Implementation CDCL.DPLL_CDCL_W_Implementation DPLL_T "HOL-L
 begin
 
 section \<open>Simple Implementation of DPLL_T\<close>
+text \<open>I try to closely follow the development in \<^file>\<open>../CDCL/DPLL_W_Implementation.thy\<close> and to re-use
+      as much as I can for this part\<close>
 
+subsection \<open>The step function\<close>
+text 
+\<open>
+  The DPLL_T_step function first performs the \<^term>\<open>dpll\<^sub>W\<close> step function \<^term>\<open>DPLL_step\<close>.
+  Once normal DPLL can not take a step anymore, we ask the theory. Since this also implies that
+  we find ourselves in a \<^term>\<open>conclusive_dpll\<^sub>W_state\<close>, it could be that we are in the UNSAT case
+  and the final theory check is wasted effort. This is an optimization for the future, however,
+  as I try to keep everything simple for now.
+\<close>
 definition DPLL_T_step :: "('v literal list \<Rightarrow> bool) \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list
   \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list" where
 "DPLL_T_step \<T>_solver = (\<lambda>(Ms, N). (let (Ms', N') = DPLL_step (Ms, N) 
@@ -17,7 +28,12 @@ definition DPLL_T_step :: "('v literal list \<Rightarrow> bool) \<Rightarrow> 'v
 lemma snd_DPLL_T_step[simp]:
   "snd (DPLL_T_step \<T>_solver (Ms, N)) = N"
   by (simp add: DPLL_T_step_def snd_DPLL_step[of Ms N] split_beta case_prod_beta list.case_eq_if) 
-  
+
+subsection \<open>The main loop\<close>
+text \<open>Other than \<^term>\<open>DPLL_tot\<close> we use a partial_function instead of a typedef. This means we do
+      not directly prove termination but will have to use a well-foundedness argument eventually.
+      Moreover, we lose some expressiveness as we always have to start from an initial state for
+      which \<^term>\<open>dpll\<^sub>W_all_inv\<close> holds. This is not an issue for DPLL however.\<close>
 partial_function (tailrec) DPLL_T_partial ::
 \<open>('v literal list \<Rightarrow> bool) \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list
   \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list\<close> where
@@ -26,9 +42,11 @@ partial_function (tailrec) DPLL_T_partial ::
 
 declare DPLL_T_partial.simps[code]
 
+subsection \<open>The main lemmas\<close>
 context theory_problem
 begin
 
+(*TODO: remove outdated assumptions, unify to the new contract of my \<T>_solvers*)
 lemma DPLL_T_step_is_a_dpll\<^sub>\<T>_step:
   assumes step: \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms, N)\<close>
   and neq: \<open>(Ms, N) \<noteq> (Ms', N')\<close>
@@ -187,7 +205,6 @@ lemma DPLL_T_partial_inv_fix:
   shows \<open>(M', N') = DPLL_T_step \<T>_solver (M', N')\<close> \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (M, N)) (toS' (M', N'))\<close> \<open>N = N'\<close>
   sorry
 
-    
 theorem DPLL_T_partial_correct:
   assumes run: \<open>(Ms, N') = DPLL_T_partial \<T>_solver ([], N)\<close>
     and state: \<open>(M, N'') = toS Ms N'\<close>

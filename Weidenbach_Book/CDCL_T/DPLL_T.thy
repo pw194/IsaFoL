@@ -1,7 +1,7 @@
 theory DPLL_T
 imports CDCL.DPLL_W
 begin
-(*TODO: Overhaul comments here due to locale change*)
+
 section \<open>DPLL(\<T>)\<close>
 text 
 \<open>
@@ -14,28 +14,29 @@ text
 subsection \<open>The theory problem locale\<close>
 text 
 \<open>
-  As a first attempt, I use the theory_problem locale in order to talk about theory entailment and
-  satisfiability. This locale is related to the development in \<^file>\<open>CDCL_W_Bound.thy\<close> and very
-  abstract. We do not describe a theory with it but the extension of our clause set by additional
-  clauses along with an abstract oracle \<open>P\<close> that can be queried:
+  As a first attempt, I use a theory_problem locale in order to talk about theory entailment and
+  consistency. This locale is very abstract. We use it to describe the extension of our clause set 
+  by additional clauses that are entailed by the theory problem \<open>P\<close>. Our \<open>P\<close> contains all the
+  necessary information of our theory to define the notion of consistency and entailment.
 
-    \<triangleright> theory_entails_clauses tells us if the orcale entails all clauses of \<open>N\<close>
-    \<triangleright> theory_check tells us if the oracle accepts an assignment \<open>I\<close>
+    \<triangleright> theory_entails_clauses tells us if the theory entails all clauses of \<open>N\<close>
+    \<triangleright> theory_check tells us if an assignment \<open>I\<close> is consistent in the theory
 
-  Further, the four locale assumptions:
+  Further, the current three locale assumptions:
 
-    \<triangleright> entail_add: entailed clause sets are closed under adding another entailed clause
+    \<triangleright> theory_check_sound: says that an assignment \<open>I\<close> that is \<T>-consistent can not (propositionally) 
+                          falsify a theory entailed clause that is fully defined in \<open>I\<close>.
 
-    \<triangleright> theory_model_found_or_conflict: tells us that an oracle rejection of a well-formed 
+    \<triangleright> theory_model_found_or_conflict: tells us that an inconsistency of a well-formed 
       (potentially partial) assignment \<open>I\<close> means, that there exists some simple clause the 
-      oracle entails, that is false under \<open>I\<close> and can be explained only with atoms of \<open>I\<close>
-
-    \<triangleright> theory_model_model_sat: if the oracle accepts a consistent assignment \<open>I\<close>, then every
-      entailed clause set over exactly the atoms of \<open>I\<close> is satisfiable. Note that satisfiable
-      only state existence of a model here, but we do not give it.
+      theory entails, and which is false under \<open>I\<close>. Further, it and can be explained only 
+      with atoms of \<open>I\<close>
 
     \<triangleright> theory_extendable: is an experimental addition to the locale as it was needed for a proof.
-      
+                         It allows us to extend a partial model of the theory, to a total one but
+                         it limits the theories that we can talk about. However, we decide to for
+                         now not deal with infinite theories and always consider a finite, non-
+                         extendable set of atoms.
 \<close>
 
 locale theory_problem =
@@ -44,7 +45,7 @@ locale theory_problem =
     theory_check           :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 50)
 
 assumes
-    theory_check_sound: \<open>I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> atms_of C \<subseteq> atm_of ` I \<Longrightarrow> I \<Turnstile> C\<close> and
+    theory_model_sound: \<open>I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> atms_of C \<subseteq> atm_of ` I \<Longrightarrow> I \<Turnstile> C\<close> and
     theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N 
       \<Longrightarrow> I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
     theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow>
@@ -58,7 +59,7 @@ text
   I try a simulation. Further, the new backtrack rule does not talk about any clause, but
   simply allows to check the consistency of the current trail if at least one decision is present.
   That is, my interpretation of DPLL(\<T>) is the standard DPLL_W with the addition of passing its
-  trail to the oracle.
+  trail to the \<T>-solver.
 \<close>
 inductive dpll\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> bool\<close> for P where
   dpll\<^sub>W_step: \<open>dpll\<^sub>W S S' \<Longrightarrow>  dpll\<^sub>\<T> P S S'\<close> |
@@ -79,9 +80,9 @@ qed
 subsection \<open>Theory Lemmas\<close>
 text 
 \<open>
-  Given an oracle \<open>P\<close> and clause set \<open>N\<close>, we define the extension of \<open>N\<close> with respect to \<open>P\<close>
+  Given a theory problem \<open>P\<close> and clause set \<open>N\<close>, we define the extension of \<open>N\<close> with respect to \<open>P\<close>
   to include all simple clauses that can be build over the atoms in \<open>N\<close>, and which are entailed by 
-  the oracle. I will call these clauses theory lemmas. Note that this set is finite, as the set of 
+  the theory. We call these clauses theory lemmas. Note that this set is finite, as the set of 
   simple clauses over \<open>N\<close> is finite as well. 
 \<close>
 definition simple_clss_theory :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> 'v clauses\<close> where
@@ -100,7 +101,7 @@ lemma set_mset_simple_clss_theory:
 
 text 
 \<open>
-  The normal \<open>dpll\<^sub>W\<close> state gets extended by adding the theory lemmas to the clauses. I
+  The normal \<^term>\<open>dpll\<^sub>W\<close> state gets extended by adding the theory lemmas to the clauses. I
   call the extension function \<open>state\<^sub>\<T>\<close>. The trail remains the same.
 \<close>
 definition state\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state\<close> where
@@ -143,9 +144,9 @@ qed
 subsection \<open>Simulation\<close>
 text 
 \<open>
-  We now want to show that a step of our \<open>dpll\<^sub>\<T>\<close> transition system corresponds to a step in our
-  \<open>dpll\<^sub>W\<close> transition system, but where we consider the set of theory lemmas to be part of the
-  initial clause set, i.e., we consider the state extension via \<open>state\<^sub>\<T>\<close>
+  We now want to show that a step of our \<^term>\<open>dpll\<^sub>\<T>\<close> transition system corresponds to a step in our
+  \<^term>\<open>dpll\<^sub>W\<close> transition system, but where we consider the set of theory lemmas to be part of the
+  initial clause set, i.e., we consider the state extension via \<^term>\<open>state\<^sub>\<T>\<close>
 \<close>
 
 lemma dpll\<^sub>W_step_is_state\<^sub>\<T>_step: \<open>dpll\<^sub>W S S' \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
@@ -188,7 +189,7 @@ qed
 text 
 \<open>
   This lemma is particularly useful because it allows us to obtain a violated theory lemma
-  based on the rejection of the oracle from a consistent trail.
+  based on the \<T>-inconsistency of the trail, as later determined by the \<T>-solver.
 \<close>
 lemma theory_conflict_trail:
   assumes cons: \<open>consistent_interp (lits_of_l M)\<close> and conf: \<open>\<not> lits_of_l M \<Turnstile>\<^sub>\<T> P\<close>
@@ -238,7 +239,7 @@ qed
 subsection \<open>Invariants\<close>
 text 
 \<open>
-  Here are some small facts about \<open>dpll\<^sub>W_all_inv\<close> and how \<open>dpll\<^sub>\<T>\<close> 
+  Here are some small facts about \<^term>\<open>dpll\<^sub>W_all_inv\<close> and how \<^term>\<open>dpll\<^sub>\<T>\<close> 
   preserves it on the extended state.
 \<close>
 
@@ -266,9 +267,9 @@ qed
 subsection \<open>Termination\<close>
 text 
 \<open>
-  Termination can reuse the existing measure from \<open>dpll\<^sub>W\<close>. We show termination by proving the set 
-  \<open>{(S', S). dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<and> dpll\<^sub>\<T> P S S'}\<close> to be a subset of the well-founded set 
-  \<open>{(b, a). (state\<^sub>\<T> P b, state\<^sub>\<T> P a) \<in> {(S', S). dpll\<^sub>W_all_inv S \<and> dpll\<^sub>W S S'}}\<close>
+  Termination can reuse the existing measure from \<^term>\<open>dpll\<^sub>W\<close>. We show termination by proving 
+  the set \<^term>\<open>{(S', S). dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<and> dpll\<^sub>\<T> P S S'}\<close> to be a subset of the 
+  well-founded set \<^term>\<open>{(b, a). (state\<^sub>\<T> P b, state\<^sub>\<T> P a) \<in> {(S', S). dpll\<^sub>W_all_inv S \<and> dpll\<^sub>W S S'}}\<close>
 \<close>
 
 lemma wf_dpll\<^sub>\<T>:
@@ -281,8 +282,8 @@ text
 \<open>
   The definition \<open>satisfiable\<^sub>\<T>\<close> tells us that there exists an assignment \<open>I\<close> such that
     \<triangleright> We can propositionally satisfy the clauses
-    \<triangleright> Our oracle will accept the assignment
-    \<triangleright> The assignment is consistent
+    \<triangleright> Our \<T>-solver accepts the assignment (in other words, it is consistent)
+    \<triangleright> The assignment is propositionally consistent (in the sense of being well-formed)
     \<triangleright> The assignment talks about the same atoms as \<open>N\<close>
 \<close>
 
@@ -324,7 +325,7 @@ proof
     then have tent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {# C #}\<close>
       using set_mset_simple_clss_theory by auto
     then show \<open>False\<close>
-      using cnot theory_check_sound[OF check tent] atms 
+      using cnot theory_model_sound[OF check tent] atms (*New axiom instead of the old models_sat*)
           set_mset_simple_clss_theory simple simple_clssE by fastforce 
   qed
 qed
@@ -332,9 +333,11 @@ qed
 text 
 \<open>
   A conclusive state is not necessarily final. It tells us that we can already conclude the
-  desired property. In our case, if the trail satisfies the clauses and our oracle accepts,
+  desired property. In our case, if the trail satisfies the clauses and is \<T>-consistent,
   then we have theory satisfiability. Secondly, if we have only propagations and a conflict,
-  then we can conclude UNSAT from this state as shown later.
+  then we can conclude UNSAT from this state as shown later. Alternatively to a total model,
+  this enables the idea to implement early stopping, especially when the \<T>-side is expensive 
+  to check.
 \<close>
 definition "conclusive_dpll\<^sub>\<T>_state P S \<longleftrightarrow>
   ((trail S \<Turnstile>asm clauses S \<and> lits_of (set (trail S)) \<Turnstile>\<^sub>\<T> P) \<or> ((\<forall>L \<in> set (trail S). \<not>is_decided L)
@@ -483,9 +486,11 @@ qed
 subsection \<open>Soundness\<close>
 text 
 \<open>
-  WIP
+  The proof reuses the propositional development. Every \<^term>\<open>dpll\<^sub>\<T>\<close> step is a
+  \<^term>\<open>dpll\<^sub>W\<close> step, so the invariants of \<^term>\<open>dpll\<^sub>W\<close> carry over, and the theory 
+  only comes into play when we show that a final state is conclusive.
 \<close>
-lemma dpll\<^sub>\<T>_sound:
+theorem dpll\<^sub>\<T>_sound:
   assumes run\<^sub>\<T>: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close>
       and final: \<open>\<forall>S. \<not> dpll\<^sub>\<T> P (M, N) S\<close>
   shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close>

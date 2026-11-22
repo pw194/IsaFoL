@@ -47,8 +47,8 @@ definition cnf_disj :: \<open>'a list list \<Rightarrow> 'a list list \<Rightarr
   \<open>cnf_disj F1 F2 = [C1 @ C2. C1 \<leftarrow> F1, C2 \<leftarrow> F2]\<close>
 
 fun to_cnf :: \<open>'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
-  \<open>to_cnf (Lit b c) = [[arith_atom b c]]\<close> |
-  \<open>to_cnf (BVar b x) = [[bool_atom b x]]\<close> |
+  \<open>to_cnf (Lit b c) = [[lit_of_arith_atom b c]]\<close> |
+  \<open>to_cnf (BVar b x) = [[lit_of_bool_atom b x]]\<close> |
   \<open>to_cnf (Conj FS) = concat (map to_cnf FS)\<close> |
   \<open>to_cnf (Disj FS) = foldr cnf_disj (map to_cnf FS) [[]]\<close>
 

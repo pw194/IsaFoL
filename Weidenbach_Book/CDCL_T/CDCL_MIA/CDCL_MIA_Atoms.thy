@@ -1,4 +1,4 @@
-theory CDCL_MIA_Models             
+theory CDCL_MIA_Atoms
   imports CDCL_T.DPLL_T MIA_Tactic.MIA_Formula_Solver
 begin
 
@@ -14,13 +14,13 @@ datatype 'b mia_atom = ArithAtom \<open>constraint\<close> | BoolAtom 'b
 text \<open>P = Is, where Is is the set of variables that are constrained to \<int>\<close>
 type_synonym mia_problem = \<open>(var set)\<close>
 
-fun arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b mia_atom literal\<close> where
-  \<open>arith_atom False c = Neg (ArithAtom c)\<close> |
-  \<open>arith_atom True c = Pos (ArithAtom c)\<close>
+fun lit_of_arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b mia_atom literal\<close> where
+  \<open>lit_of_arith_atom False c = Neg (ArithAtom c)\<close> |
+  \<open>lit_of_arith_atom True c = Pos (ArithAtom c)\<close>
 
-fun bool_atom :: \<open>bool \<Rightarrow> 'b \<Rightarrow> 'b mia_atom literal\<close> where
-  \<open>bool_atom False x = Neg (BoolAtom x)\<close> |
-  \<open>bool_atom True x = Pos (BoolAtom x)\<close>
+fun lit_of_bool_atom :: \<open>bool \<Rightarrow> 'b \<Rightarrow> 'b mia_atom literal\<close> where
+  \<open>lit_of_bool_atom False x = Neg (BoolAtom x)\<close> |
+  \<open>lit_of_bool_atom True x = Pos (BoolAtom x)\<close>
 
 fun holds_atm :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom \<Rightarrow> bool\<close> where
   \<open>holds_atm v \<beta> (ArithAtom c) = (v \<Turnstile>\<^sub>c c)\<close> |
