@@ -235,7 +235,7 @@ interpretation theory_mia: theory_problem theory_entails_clauses_mia theory_chec
 thm theory_mia.dpll\<^sub>\<T>_sound
 
 subsection \<open>Soundness\<close>
-lemma satisfiable\<^sub>\<T>_iff_sat_mf: \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N) 
+lemma satisfiable\<^sub>\<T>_iff_model: \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N) 
                               \<longleftrightarrow> (\<exists>v \<beta>. wf_integral v P \<and> (\<forall>C \<in># N. (\<exists>L \<in># C. holds_lit v \<beta> L)))\<close>
 proof 
   assume \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N)\<close>

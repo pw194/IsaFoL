@@ -86,13 +86,47 @@ qed
 definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_atom literal list \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>mia_\<T>_solver c Is = (\<lambda>Ms. decide_mia_formula c Is (Conj (map lit_to_mf Ms)))\<close>
 
+thm decide_mia_formula_unsat
+lemma mia_solver_iff:
+  \<open>(\<not> Option.is_none (mia_\<T>_solver c Is Ms)) \<longleftrightarrow> theory_check_mia (set Ms) (set Is)\<close>
+proof
+  assume \<open>\<not> Option.is_none (mia_\<T>_solver c Is Ms)\<close>
+  then obtain v \<beta> where sat: \<open>sat_mf v Is \<beta> (Conj (map lit_to_mf Ms))\<close>
+    using decide_mia_formula_sat unfolding mia_\<T>_solver_def
+    by (metis is_none_code(1) option.exhaust surj_pair)  
+  show \<open>theory_check_mia (set Ms) (set Is)\<close>
+    unfolding theory_check_mia_def 
+  proof (intro exI[of _ v] exI[of _ \<beta>] conjI)
+    show \<open>wf_integral v (set Is)\<close>
+      using sat unfolding sat_mf_def by auto 
+  next
+    show \<open>Ball (set Ms) (holds_lit v \<beta>)\<close>
+      using sat unfolding sat_mf_def using sat_conj by blast 
+  qed
+next
+  assume A1: \<open>theory_check_mia (set Ms) (set Is)\<close>
+  then obtain v \<beta> where integral: \<open>wf_integral v (set Is)\<close> \<open>Ball (set Ms) (holds_lit v \<beta>)\<close>
+    by (auto simp: theory_check_mia_def)
+  then have con: \<open>sat_mf_struct v \<beta> (Conj (map lit_to_mf Ms))\<close>
+    using sat_conj by blast 
+  show \<open>\<not> Option.is_none (mia_\<T>_solver c Is Ms)\<close>
+  proof
+    assume \<open>Option.is_none (mia_\<T>_solver c Is Ms)\<close>
+    then have \<open>\<nexists>v \<beta>. sat_mf v Is \<beta> (Conj (map lit_to_mf Ms))\<close>
+      unfolding mia_\<T>_solver_def using decide_mia_formula_unsat by (metis Option.is_none_def) 
+    then show \<open>False\<close>
+      using integral con unfolding sat_mf_def
+      by (meson empty_iff satisfies_real_mixed_constraints.simps) 
+  qed
+qed
+
 definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>dpll_mia c Is F = (let N = to_cnf F;
       (M, _) = DPLL_T_partial (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) ([], N);
       Ms = map lit_of M
     in if \<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms then mia_\<T>_solver c Is Ms else None)\<close>
 
-thm decide_mia_formula_sat decide_mia_formula_unsat
+thm decide_mia_formula_sat
 theorem dpll_mia_formula_sat: 
   assumes "dpll_mia c Is F = Some (v, \<beta>)"
   shows "sat_mf (of_rat_val v) Is \<beta> F"
@@ -118,7 +152,9 @@ proof -
     unfolding sat_mf_def
     using N_def all sat satconjmf by (metis holds_cnf_def sat_mf_def to_cnf_correct) 
 qed
+
 thm disjE
+thm decide_mia_formula_unsat
 theorem decide_mia_formula_unsat: 
   assumes "dpll_mia c Is F = None"
   shows "\<nexists> v \<beta>. sat_mf v Is \<beta> F"
@@ -132,15 +168,41 @@ proof
     by (auto simp: Let_def split: if_splits prod.splits)
   assume \<open>\<exists>v \<beta>. sat_mf v Is \<beta> F\<close>
   then obtain v \<beta> where sat: \<open>sat_mf v Is \<beta> F\<close> by auto
+  then have clauses: \<open>holds_cnf v \<beta> N\<close>
+    unfolding sat_mf_def N_def using to_cnf_correct by auto
+  have integral: \<open>wf_integral v (set Is)\<close>
+    using sat by (auto simp: sat_mf_def)
+  have sat_t: \<open>theory_mia.satisfiable\<^sub>\<T> (set Is) (set_mset (mset (map mset N)))\<close>
+    using satisfiable\<^sub>\<T>_iff_model integral clauses using N_def by (metis cnf_correct cnf_def to_cnf_correct)
+  have init: \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (set Is) (toS [] N))\<close>
+    by (rule theory_mia.dpll\<^sub>W_all_inv_state\<^sub>\<T>_init)
+  have solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
+                  atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
+                  (\<not> Option.is_none (mia_\<T>_solver c Is Ms)) = theory_check_mia (set Ms) (set Is)\<close>
+    using mia_solver_iff by blast
+  have NN: \<open>N = N'\<close>
+    using theory_problem.DPLL_T_partial_inv_fix(3)[OF theory_mia.theory_problem_axioms init run]
+      solver by blast
+  then have model: \<open>(M \<Turnstile>asm mset (map mset N) \<and> theory_check_mia (lits_of_l M) (set Is))\<close>
+    using theory_problem.DPLL_T_partial_correct[OF theory_mia.theory_problem_axioms run, of M \<open>((mset (map mset N)))\<close> \<open>(set Is)\<close>]
+    using sat_t solver by blast 
   from dis show \<open>False\<close>
   proof (elim disjE)
     assume \<open>\<not> (\<forall>C\<in>set N. \<exists>L\<in>set C. L \<in> set Ms)\<close>
     then show \<open>False\<close>
-      sorry
+      using model Ms_def 
+      apply (simp add: true_annots_true_cls true_clss_def true_cls_def lits_of_def)
+      by blast 
   next
+    have \<open>(set Ms) = lits_of_l M\<close>
+      using Ms_def by (simp add: lits_of_def) 
+    then have \<open>(\<not> Option.is_none (mia_\<T>_solver c Is Ms))\<close>
+      using model mia_solver_iff[of c Is Ms] Ms_def by auto 
+    then have con: \<open>mia_\<T>_solver c Is Ms \<noteq> None\<close>
+      by (metis is_none_simps(1)) 
     assume \<open>mia_\<T>_solver c Is Ms = None\<close>
     then show \<open>False\<close>
-      sorry
+      using con by auto 
   qed
 qed
 
