@@ -176,10 +176,9 @@ proof
     using satisfiable\<^sub>\<T>_iff_model integral clauses using N_def by (metis cnf_correct cnf_def to_cnf_correct)
   have init: \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (set Is) (toS [] N))\<close>
     by (rule theory_mia.dpll\<^sub>W_all_inv_state\<^sub>\<T>_init)
-  have solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
-                  atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
-                  (\<not> Option.is_none (mia_\<T>_solver c Is Ms)) = theory_check_mia (set Ms) (set Is)\<close>
-    using mia_solver_iff by blast
+  have solver: \<open>theory_problem.\<T>_solver_correct theory_check_mia
+                  (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) (set Is) N\<close>
+    by (rule theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms]; simp add: mia_solver_iff)
   have NN: \<open>N = N'\<close>
     using theory_problem.DPLL_T_partial_inv_fix(3)[OF theory_mia.theory_problem_axioms init run]
       solver by blast

@@ -2,14 +2,20 @@ theory LocaleTest
   imports CDCL_T.DPLL_T
 begin
 
-section \<open>Toy interpretations\<close>
+section \<open>Locale experiments\<close>
 text 
 \<open>
   Here I perform some toy interpretations of the theory_problem locale in order to get more
-  intuition behind its axioms and also show some things that do not follow from it.
+  intuition behind its axioms and also show some things that do not follow from it. Further,
+  whenver something about the locale changes, or I find out something interesting, I will
+  document it here, also to have a historical account of some of the changes I made and thoughts
+  I had.
 \<close>
 
-locale theory_problem_test =
+subsection \<open>Initial locale\<close>
+text \<open>This was the baseline and starting point from which I deviated a little by now\<close>
+
+locale theory_problem_v1 =
   fixes
     theory_entails_clauses :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<^sub>s\<close> 50) and
     theory_check           :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 50)
@@ -23,17 +29,17 @@ assumes
 begin
 end
 
-subsection \<open>Trivial interpretation\<close>
+subsubsection \<open>Trivial interpretation\<close>
 text 
 \<open>
   The purpose of this section is to make sure the locale can even be interpreted to begin with
 \<close>
-interpretation trivial: theory_problem_test \<open>\<lambda>_ _. False\<close> \<open>\<lambda>_ _. True\<close>
+interpretation trivial: theory_problem_v1 \<open>\<lambda>_ _. False\<close> \<open>\<lambda>_ _. True\<close>
   apply (unfold_locales)
   apply auto
   done
 
-subsection \<open>Partial model ==/> Total model\<close>
+subsubsection \<open>Partial model ==/> Total model\<close>
 text 
 \<open>
   This is a counterexample I came up with to show that we can not always extend a partial model
@@ -68,7 +74,7 @@ proof -
     by blast
 qed
   
-locale no_extension = theory_problem_test theory_entails_clauses t_check
+locale no_extension = theory_problem_v1 theory_entails_clauses t_check
 
 interpretation no_extension
 proof unfold_locales
@@ -163,5 +169,27 @@ qed
   
 end
 
+subsection \<open>Second version\<close>
+text 
+\<open>
+  Due to the extension example above, I added the theory_extendable assumption. Furthermore
+  I made the old \<open>theory_model_model_sat\<close> stronger as I changed the definition of \<open>I \<Turnstile>\<^sub>\<T> P\<close>
+  to be more in accordance to how I understand it from the literature. My first attempt was
+  also working but I like this version more, in hindsight.
+\<close>
+locale theory_problem_v2 =
+  fixes
+    theory_entails_clauses :: \<open>'p \<Rightarrow> 'v clauses \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<^sub>s\<close> 50) and
+    theory_check           :: \<open>'v literal set \<Rightarrow> 'p \<Rightarrow> bool\<close> (infix \<open>\<Turnstile>\<^sub>\<T>\<close> 50)
+
+assumes
+    theory_model_sound: \<open>I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<Longrightarrow> atms_of C \<subseteq> atm_of ` I \<Longrightarrow> I \<Turnstile> C\<close> and
+    theory_model_found_or_conflict: \<open>consistent_interp I \<Longrightarrow> atm_of ` I = atms_of_mm N \<Longrightarrow> I \<Turnstile>sm N 
+      \<Longrightarrow> I \<Turnstile>\<^sub>\<T> P \<or> (\<exists>C. I \<Turnstile>s CNot C \<and> P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#} \<and> C \<in> simple_clss (atm_of ` I))\<close> and
+    theory_extendable: \<open>consistent_interp I \<Longrightarrow> atm_of ` I \<subseteq> atms_of_mm N \<Longrightarrow>
+      I \<Turnstile>\<^sub>\<T> P \<Longrightarrow> \<exists>J. J  \<Turnstile>\<^sub>\<T> P \<and>  I \<subseteq> J \<and> atm_of ` J = atms_of_mm N \<and> consistent_interp J\<close>
+begin
+
+end
 
 end

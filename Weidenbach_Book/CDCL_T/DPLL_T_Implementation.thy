@@ -46,11 +46,29 @@ subsection \<open>The main lemmas\<close>
 context theory_problem
 begin
 
-(*TODO: remove outdated assumptions, unify to the new contract of my \<T>_solvers*)
+definition \<T>_solver_correct :: \<open>('v literal list \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'v literal list list \<Rightarrow> bool\<close> where
+  \<open>\<T>_solver_correct \<T>_solver P N \<longleftrightarrow>
+     (\<forall>Ms. consistent_interp (set Ms) \<longrightarrow> atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<longrightarrow>
+           (\<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P))\<close>
+
+lemma \<T>_solver_correctI:
+  assumes \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow> atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
+             \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+  shows \<open>\<T>_solver_correct \<T>_solver P N\<close>
+  using assms by (simp add: \<T>_solver_correct_def)
+
+lemma \<T>_solver_correctD:
+  assumes \<open>\<T>_solver_correct \<T>_solver P N\<close>
+    and \<open>consistent_interp (set Ms)\<close>
+    and \<open>atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N))\<close>
+  shows \<open>\<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+  using assms by (simp add: \<T>_solver_correct_def)
+
 lemma DPLL_T_step_is_a_dpll\<^sub>\<T>_step:
-  assumes step: \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms, N)\<close>
+  assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close> 
+  and step: \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms, N)\<close>
   and neq: \<open>(Ms, N) \<noteq> (Ms', N')\<close>
-  and rej: \<open>\<And>I. \<not> \<T>_solver I \<Longrightarrow> \<not> (set I) \<Turnstile>\<^sub>\<T> P\<close>
+  and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
   shows \<open>dpll\<^sub>\<T> P (toS Ms N) (toS Ms' N')\<close>
 proof -
   have "(Ms', N') = DPLL_step (Ms, N)" if "(Ms, N) \<noteq> DPLL_step (Ms, N)"
@@ -91,7 +109,18 @@ proof -
       moreover have \<open>is_decided a\<close>
         using bt Cons by (metis backtrack_split_snd_hd_decided list.discI list.sel(1) snd_eqD)
       moreover have \<open>\<not> lits_of_l (trail (toS Ms N)) \<Turnstile>\<^sub>\<T> P\<close>
-         using rej[OF False] by (simp add: lits_of_def)
+      proof -
+        have cons: \<open>consistent_interp (set (map lit_of Ms))\<close>
+          using inv by (auto simp: lits_of_def)
+        have atms: \<open>atm_of ` set (map lit_of Ms) \<subseteq> atms_of_mm (mset (map mset N))\<close>
+          using inv
+          using atms_of_mm_state\<^sub>\<T>_clauses_equals calculation(1) state\<^sub>\<T>_trail_equals_state 
+            by (metis dpll\<^sub>W_all_inv_def list.set_map lits_of_def snd_eqD) 
+        have \<open>\<T>_solver (map lit_of Ms) \<longleftrightarrow> set (map lit_of Ms) \<Turnstile>\<^sub>\<T> P\<close>
+          using solver cons atms by (simp add: \<T>_solver_correct_def)
+        then show ?thesis
+          using False by (simp add: lits_of_def)
+      qed
       ultimately show ?thesis using dpll\<^sub>\<T>.backtrack\<^sub>\<T>
         using step by (metis Pair_inject snd_eqD) 
     qed
@@ -103,12 +132,12 @@ qed
 lemma DPLL_T_step_inv:
   assumes \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms, N)\<close>
     and inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close>
-    and rej: \<open>\<And>I. \<not> \<T>_solver I \<Longrightarrow> \<not> (set I) \<Turnstile>\<^sub>\<T> P\<close>
+    and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
   shows \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms' N'))\<close>
 proof(cases \<open>(Ms', N') \<noteq> (Ms, N)\<close>)
   case True
   then show ?thesis
-    using DPLL_T_step_is_a_dpll\<^sub>\<T>_step assms(1) dpll\<^sub>\<T>_inv inv rej by blast 
+    using DPLL_T_step_is_a_dpll\<^sub>\<T>_step assms(1) dpll\<^sub>\<T>_inv inv solver by blast   
 next
   case False
   then show ?thesis
@@ -120,9 +149,7 @@ term lits_of_l
 lemma DPLL_T_step_stuck_conclusive:
   assumes stuck: \<open>(Ms, N) = DPLL_T_step \<T>_solver (Ms, N)\<close>
     and inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close>
-    and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
-                   atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
-                   \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+    and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
   shows \<open>conclusive_dpll\<^sub>\<T>_state P (toS Ms N)\<close>
 proof-
   have lits: \<open>set (map lit_of Ms) = lits_of_l Ms\<close>
@@ -142,7 +169,7 @@ proof-
       using inv
       using atms_of_mm_state\<^sub>\<T>_clauses_equals lits state\<^sub>\<T>_trail_equals_state by (metis dpll\<^sub>W_all_inv_dest(2) fst_eqD snd_eqD) 
     have solver_iff: \<open>\<T>_solver (map lit_of Ms) = (set (map lit_of Ms) \<Turnstile>\<^sub>\<T> P)\<close>
-      by (rule solver[of \<open>map lit_of Ms\<close>, OF cons atms])
+      using solver cons atms by (simp add: \<T>_solver_correct_def)
     assume A1: \<open>trail (toS Ms N) \<Turnstile>asm clauses (toS Ms N)\<close>
     then show \<open>conclusive_dpll\<^sub>\<T>_state P (toS Ms N)\<close>
     proof (cases \<open>\<T>_solver (map lit_of Ms)\<close>)
@@ -195,22 +222,26 @@ proof-
   qed
 qed
 
+thm wf_induct
+thm wf_if_measure_f wf_dpll\<^sub>\<T>
+lemma dpll\<^sub>\<T>_is_wf:
+  shows \<open>wf {(S', S). (toS' S', toS' S) \<in> {(T', T). dpll\<^sub>W_all_inv (state\<^sub>\<T> P T) \<and> dpll\<^sub>\<T> P T T'}}\<close>
+  using wf_if_measure_f[OF wf_dpll\<^sub>\<T>, of \<open>toS'\<close> P] by auto
 
+thm wf_induct wf_induct_rule
 lemma DPLL_T_partial_inv_fix:
-  assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS M N))\<close>
-      and run: \<open>(M', N') = DPLL_T_partial \<T>_solver (M, N)\<close>
-      and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
-              atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
-              \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
-  shows \<open>(M', N') = DPLL_T_step \<T>_solver (M', N')\<close> \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (M, N)) (toS' (M', N'))\<close> \<open>N = N'\<close>
-  sorry
+  assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close>
+      and run: \<open>(Ms', N') = DPLL_T_partial \<T>_solver (Ms, N)\<close>
+      and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
+    shows \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms', N')\<close> 
+          \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (Ms, N)) (toS' (Ms', N'))\<close> 
+          \<open>N = N'\<close> sorry (*Idea: wf_induction as DPLL_T_step preserves the relation previously shown to be wf*)
+
 
 theorem DPLL_T_partial_correct:
   assumes run: \<open>(Ms, N') = DPLL_T_partial \<T>_solver ([], N)\<close>
     and state: \<open>(M, N'') = toS Ms N'\<close>
-   and solver: \<open>\<And>Ms. consistent_interp (set Ms) \<Longrightarrow>
-                atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N)) \<Longrightarrow>
-                \<T>_solver Ms \<longleftrightarrow> set Ms \<Turnstile>\<^sub>\<T> P\<close>
+    and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
   shows \<open>(M \<Turnstile>asm N'' \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N'')\<close>
 proof -
   have 1: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS [] N))\<close>
