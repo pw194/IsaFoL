@@ -229,14 +229,50 @@ lemma dpll\<^sub>\<T>_is_wf:
   using wf_if_measure_f[OF wf_dpll\<^sub>\<T>, of \<open>toS'\<close> P] by auto
 
 thm wf_induct wf_induct_rule
+
+lemma DPLL_T_partial_wf_induct:
+  assumes stateS: \<open>S = (Ms, N)\<close> and
+          stateS': \<open>S' = (Ms', N')\<close> and
+          inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS' S))\<close> and
+          run: \<open>S' = DPLL_T_partial \<T>_solver S\<close> and
+          solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
+  shows \<open>S' = DPLL_T_step \<T>_solver S' \<and> (dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' S) (toS' S') \<and> N = N'\<close>
+     using dpll\<^sub>\<T>_is_wf[of P] stateS inv run
+    proof (induction S arbitrary: Ms rule: wf_induct_rule)
+      case (less S)
+      then show ?case proof (cases \<open>DPLL_T_step \<T>_solver S = S\<close>)
+        case True
+        then have \<open>DPLL_T_partial \<T>_solver S = S\<close>
+          by (simp add: DPLL_T_partial.simps)
+        then show ?thesis using less True stateS' by auto
+      next
+        case False
+        then obtain S'' where T_step: \<open>DPLL_T_step \<T>_solver S = S''\<close> 
+                       and inv_S': \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS' S''))\<close> 
+                       and step: \<open>dpll\<^sub>\<T> P (toS' S) (toS' S'')\<close>
+                       and snd_N: \<open>snd S'' = N\<close>
+          using less.prems(1,2) solver theory_problem_axioms
+          by (metis (mono_tags, lifting) case_prod_unfold prod.exhaust_sel snd_DPLL_T_step theory_problem.DPLL_T_step_inv theory_problem.DPLL_T_step_is_a_dpll\<^sub>\<T>_step)      
+        then have wf_step: \<open>(S'', S) \<in> {(S', S). (toS' S', toS' S) \<in> {(T', T). dpll\<^sub>W_all_inv (state\<^sub>\<T> P T) \<and> dpll\<^sub>\<T> P T T'}}\<close>
+          using less.prems(2) by auto 
+        have H: \<open>S' = DPLL_T_partial \<T>_solver S''\<close>
+          by (simp add: DPLL_T_partial.simps T_step less.prems(3)) 
+        obtain Ms'' where pair: \<open>S'' = (Ms'', N)\<close>
+          using prod.exhaust_sel snd_N by blast 
+        then show ?thesis using less(1)[OF wf_step pair inv_S' H] step by auto
+      qed
+    qed
+
 lemma DPLL_T_partial_inv_fix:
   assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS Ms N))\<close>
       and run: \<open>(Ms', N') = DPLL_T_partial \<T>_solver (Ms, N)\<close>
       and solver: \<open>\<T>_solver_correct \<T>_solver P N\<close>
     shows \<open>(Ms', N') = DPLL_T_step \<T>_solver (Ms', N')\<close> 
           \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* (toS' (Ms, N)) (toS' (Ms', N'))\<close> 
-          \<open>N = N'\<close> sorry (*Idea: wf_induction as DPLL_T_step preserves the relation previously shown to be wf*)
-
+          \<open>N = N'\<close>
+  using inv run solver DPLL_T_partial_wf_induct apply fastforce
+  using inv run solver DPLL_T_partial_wf_induct apply force
+  using inv run solver DPLL_T_partial_wf_induct by fastforce
 
 theorem DPLL_T_partial_correct:
   assumes run: \<open>(Ms, N') = DPLL_T_partial \<T>_solver ([], N)\<close>
