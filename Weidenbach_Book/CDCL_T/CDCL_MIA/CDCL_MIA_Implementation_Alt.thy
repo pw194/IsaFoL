@@ -206,4 +206,25 @@ proof
   qed
 qed
 
+(*Code gen test*)
+derive (eq) ceq literal
+derive (no) ccompare literal
+derive (dlist) set_impl literal
+
+derive (eq) ceq mia_atom
+derive (no) ccompare mia_atom
+derive (dlist) set_impl mia_atom
+
+derive (eq) ceq annotated_lit
+derive (no) ccompare annotated_lit
+derive (dlist) set_impl annotated_lit
+
+export_code dpll_mia in Haskell
+
+
+definition F1 :: \<open>var mia_formula\<close> where
+  \<open>F1 = Conj [(BVar True 0), Disj [(BVar False 0), (Lit True (GT (lp_monom 1 0) 5))]]\<close>
+
+value \<open>map_option (\<lambda>(v, \<beta>). (v 0, \<beta> 0)) (dpll_mia Preprocess_Eqs [0] F1)\<close>
+
 end

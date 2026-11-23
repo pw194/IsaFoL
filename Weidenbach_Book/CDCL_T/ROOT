@@ -11,4 +11,5 @@ session CDCL_MIA in "CDCL_MIA" = MIA_Tactic +
     CDCL_MIA_Atoms
     CDCL_MIA_Interp  
     CDCL_MIA_Implementation
+    CDCL_MIA_Implementation_Alt
     LocaleTest
