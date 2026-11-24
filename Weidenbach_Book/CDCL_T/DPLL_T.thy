@@ -8,7 +8,8 @@ text
   This file offers a simple formalization of an abstract DPLL(\<T>) calculus. Note that we mean DPLL
   in the sense of naive backtracking and no clause learning. Unlike a lot of papers and SMT
   literature, we distinguish between DPLL as the naive backtracking version and CDCL as the modern
-  clause learning procedure.
+  clause learning procedure. Moreover we always consider a given clause set, thus our atoms we
+  talk about are finite in nature and we do not currently support adding new atoms.
 \<close>
 
 subsection \<open>The theory problem locale\<close>
@@ -24,19 +25,17 @@ text
 
   Further, the current three locale assumptions:
 
-    \<triangleright> theory_check_sound: says that an assignment \<open>I\<close> that is \<T>-consistent can not (propositionally) 
-                          falsify a theory entailed clause that is fully defined in \<open>I\<close>.
+    \<triangleright> theory_check_sound: says that an assignment \<open>I\<close> that is \<T>-consistent must propositionally
+                          satisfy a theory entailed clause that is fully defined in \<open>I\<close>.
 
     \<triangleright> theory_model_found_or_conflict: tells us that an inconsistency of a well-formed 
       (potentially partial) assignment \<open>I\<close> means, that there exists some simple clause the 
       theory entails, and which is false under \<open>I\<close>. Further, it and can be explained only 
-      with atoms of \<open>I\<close>
+      with atoms of \<open>I\<close> The atoms of \<open>I\<close> must be the same as the atoms of some clause set \<open>N\<close>
 
     \<triangleright> theory_extendable: is an experimental addition to the locale as it was needed for a proof.
-                         It allows us to extend a partial model of the theory, to a total one but
-                         it limits the theories that we can talk about. However, we decide to for
-                         now not deal with infinite theories and always consider a finite, non-
-                         extendable set of atoms.
+                         It allows us to extend a consistent, partial model of the theory, to a 
+                         total one that covers exactly the finitely many atoms of N.
 \<close>
 
 locale theory_problem =
@@ -57,9 +56,9 @@ text
 \<open>
   Instead of directly working in the \<^file>\<open>../CDCL/DPLL_W.thy\<close> file and adjusting the rules,
   I try a simulation. Further, the new backtrack rule does not talk about any clause, but
-  simply allows to check the consistency of the current trail if at least one decision is present.
-  That is, my interpretation of DPLL(\<T>) is the standard DPLL_W with the addition of passing its
-  (partial) trail to the \<T>-solver.
+  simply allows to check the consistency of the current trail if at least one decision is present,
+  and then backtracks in the case of an inconsistency. That is, my interpretation of DPLL(\<T>) is the 
+  standard DPLL_W with the addition of passing its (partial) trail to the \<T>-solver.
 \<close>
 inductive dpll\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> bool\<close> for P where
   dpll\<^sub>W_step: \<open>dpll\<^sub>W S S' \<Longrightarrow>  dpll\<^sub>\<T> P S S'\<close> |
@@ -206,10 +205,10 @@ qed
 lemma dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step:
   \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
 proof (induction rule: dpll\<^sub>\<T>.induct)
-  case (dpll\<^sub>W_step S S') \<comment> \<open>A W step is trivially a \<T> step\<close>
+  case (dpll\<^sub>W_step S S') \<comment> \<open>A W step is trivially a step wrt. \<open>state\<^sub>\<T>\<close>\<close>
   then show ?case using dpll\<^sub>W_step_is_state\<^sub>\<T>_step by auto
 next
-  case (backtrack\<^sub>\<T> S M' L M) \<comment> \<open>A \<T> backtrack can be shown to be a W backtrack rule application\<close>
+  case (backtrack\<^sub>\<T> S M' L M) \<comment> \<open>A \<T> backtrack can be shown to be a W backtrack wrt. \<open>state\<^sub>\<T>\<close>\<close>
   then obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
     and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
     and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
@@ -244,7 +243,9 @@ subsection \<open>Invariants\<close>
 text 
 \<open>
   Here are some small facts about \<^term>\<open>dpll\<^sub>W_all_inv\<close> and how \<^term>\<open>dpll\<^sub>\<T>\<close> 
-  preserves it on the extended state.
+  preserves it on the extended state. Note that some comments in this file implicitly assume
+  to talk about states that satisfy the extended-state invariant (via \<open>state\<^sub>\<T>\<close>), for brevity.
+  The necessity of the (extended) invariant should always be clear from the proofs.
 \<close>
 
 lemma dpll\<^sub>W_inv_state\<^sub>\<T>_inv: \<open>dpll\<^sub>W_all_inv S \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close>
@@ -338,11 +339,11 @@ subsection \<open>Conclusive states\<close>
 text 
 \<open>
   A conclusive state is not necessarily final. It tells us that we can already conclude the
-  desired property. In our case, if the trail satisfies the clauses and is \<T>-consistent,
-  then we have theory satisfiability. Secondly, if we have only propagations and a conflict,
-  then we can conclude UNSAT from this state as shown later. Alternatively to a total model,
-  this enables the idea to implement early stopping, especially when the \<T>-side is expensive 
-  to check.
+  desired property. In our case, for a reachable state that satisfies the extended state invariant,
+  if the trail satisfies the clauses and is \<T>-consistent, then we have theory satisfiability. 
+  Secondly, if we have only propagations and a conflict, then we can conclude UNSAT from this state 
+  as shown later. Alternatively to a total model, this enables the idea to implement early stopping, 
+  before all clause atoms are assigned.
 \<close>
 definition "conclusive_dpll\<^sub>\<T>_state P S \<longleftrightarrow>
   ((trail S \<Turnstile>asm clauses S \<and> lits_of (set (trail S)) \<Turnstile>\<^sub>\<T> P) \<or> ((\<forall>L \<in> set (trail S). \<not>is_decided L)
@@ -478,10 +479,11 @@ qed
 subsection \<open>Soundness\<close>
 text 
 \<open>
-  The proof reuses the propositional development. Every \<^term>\<open>dpll\<^sub>\<T>\<close> step is a
-  \<^term>\<open>dpll\<^sub>W\<close> step, so the invariants of \<^term>\<open>dpll\<^sub>W\<close> carry over, and the theory 
-  only comes into play when we show that a final state is conclusive. The conclusive state
-  then (by the correctness lemma) allows us to conclude soundness immediately.
+  The proof reuses the propositional development. Every \<^term>\<open>dpll\<^sub>\<T>\<close> step under the invariant
+  corresponds to a \<^term>\<open>dpll\<^sub>W\<close> step inside the extended state, so the invariants of \<^term>\<open>dpll\<^sub>W\<close> 
+  carry over, and the theory comes into play in most simulation lemmas and when we show that a final 
+  state is conclusive. The conclusive state then (by the correctness lemma) allows us to conclude 
+  soundness immediately.
 \<close>
 theorem dpll\<^sub>\<T>_sound:
   assumes run\<^sub>\<T>: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close>

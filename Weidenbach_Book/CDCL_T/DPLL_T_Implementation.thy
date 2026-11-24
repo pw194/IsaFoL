@@ -30,8 +30,9 @@ lemma snd_DPLL_T_step[simp]:
   by (simp add: DPLL_T_step_def snd_DPLL_step[of Ms N] split_beta case_prod_beta list.case_eq_if) 
 
 subsection \<open>The main loop\<close>
-text \<open>Other than \<^term>\<open>DPLL_tot\<close> we use a partial_function instead of a typedef. This means we do
-      not directly prove termination but will have to use a well-foundedness argument eventually.\<close>
+text \<open>Other than \<^term>\<open>DPLL_tot\<close> we use a partial_function instead of a combination of a typedef, 
+      the function keyword and an explicit termination argument. This means we do not explicitly 
+      prove termination but rely on a well-foundedness argument and well-founded induction.\<close>
 partial_function (tailrec) DPLL_T_partial ::
 \<open>('v literal list \<Rightarrow> bool) \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list
   \<Rightarrow> 'v dpll\<^sub>W_ann_lits \<times> 'v literal list list\<close> where
@@ -45,12 +46,12 @@ text
 \<open>
   Because of the different \<T>_solvers I can choose I added a notion of correctness for the
   implementation of the \<T>_solver. This is to support the mixed_cs_solver development that works
-  on pure constraints. Using the full decision procedure on conjunctions would not require it,
-  as it precisely matches the abstract loale operations.
+  on pure constraints. Using the full decision procedure on conjunctions would not require its
+  premises, as it precisely matches the abstract loale operations and establishes the theorem
+  immediately.
 \<close>
 context theory_problem
 begin
-
 
 definition \<T>_solver_correct :: \<open>('v literal list \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'v literal list list \<Rightarrow> bool\<close> where
   \<open>\<T>_solver_correct \<T>_solver P N \<longleftrightarrow>
@@ -114,7 +115,7 @@ proof -
         using False calculation(2) that by auto 
       moreover have \<open>is_decided a\<close>
         using bt Cons by (metis backtrack_split_snd_hd_decided list.discI list.sel(1) snd_eqD)
-      moreover have \<open>\<not> lits_of_l (trail (toS Ms N)) \<Turnstile>\<^sub>\<T> P\<close> \<comment> \<open>Establish premise of solver soundness\<close>
+      moreover have \<open>\<not> lits_of_l (trail (toS Ms N)) \<Turnstile>\<^sub>\<T> P\<close> \<comment> \<open>Establish premise of backtracking\<close>
       proof -
         have cons: \<open>consistent_interp (set (map lit_of Ms))\<close>
           using inv by (auto simp: lits_of_def)

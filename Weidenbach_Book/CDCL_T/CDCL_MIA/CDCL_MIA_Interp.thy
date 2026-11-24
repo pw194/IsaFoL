@@ -17,81 +17,18 @@ abbreviation wf_integral :: \<open>(nat \<Rightarrow> real) \<Rightarrow> var se
   \<open>wf_integral v Is \<equiv> (\<forall>x \<in> Is. v x \<in> \<int>)\<close>
 
 subsection \<open>Consistency and entailment\<close>
-text \<open>This is our \<open>I \<Turnstile>\<^sub>\<T> P\<close>. It models asking the \<T>-solver for the consistency of
+text \<open>This is our \<open>I \<Turnstile>\<^sub>\<T> P\<close>. It models asking the \<T>_solver for the consistency of
       a set of theory literals (which implicitly means the consistency of the conjunction of
       theory literals).\<close>
 definition theory_check_mia :: \<open>'b mia_atom literal set \<Rightarrow> mia_problem \<Rightarrow> bool\<close> where
   \<open>theory_check_mia I P = (\<exists>v \<beta>. (wf_integral v P) \<and> (\<forall>L \<in> I. holds_lit v \<beta> L))\<close>
 
-text \<open>This is our \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>. A clause set N is valis with respect to  P if all the clauses in 
+text \<open>This is our \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s N\<close>. A clause set N is valid with respect to P if all the clauses in 
       it are valid in the theory.\<close>
 definition theory_entails_clauses_mia :: \<open>mia_problem \<Rightarrow> 'b mia_atom clauses \<Rightarrow> bool\<close> where
   \<open>theory_entails_clauses_mia P N = (\<forall>v \<beta>. (wf_integral v P) \<longrightarrow> (\<forall>C \<in># N. \<exists>L \<in># C. holds_lit v \<beta> L))\<close>
 
-subsection \<open>Lemmas needed for the interpretation\<close>
-text \<open>Interpreting the locale gave rise to some helper lemmas which were useful for the proofs\<close>
-lemma holds_lit_conflict:
-  assumes \<open>holds_lit v \<beta> L\<close> and \<open>holds_lit v \<beta> (-L)\<close>
-  shows \<open>False\<close>
-  using assms
-proof (cases L)
-  case (Pos x1)
-  then show ?thesis
-  proof (cases x1)
-    case (ArithAtom x1)
-    then show ?thesis
-      using Pos assms by auto 
-  next
-    case (BoolAtom x2)
-    then show ?thesis 
-      using Pos assms by auto 
-  qed
-next
-  case (Neg x2)
-  then show ?thesis
-  proof (cases x2)
-    case (ArithAtom x1)
-    then show ?thesis 
-      using Neg assms by auto 
-  next
-    case (BoolAtom x2)
-    then show ?thesis
-       using Neg assms by auto 
-  qed
-qed
-
-lemma holds_lit_neg: 
-  assumes \<open>\<not> holds_lit v \<beta> L\<close>
-  shows \<open>holds_lit v \<beta> (-L)\<close>
-proof (cases L)
-  case (Pos x1)
-  then show ?thesis
-  proof (cases x1)
-    case (ArithAtom x1)
-    then show ?thesis
-      using Pos assms by auto 
-  next
-    case (BoolAtom x2)
-    then show ?thesis 
-      using Pos assms by auto 
-  qed
-next
-  case (Neg x2)
-  then show ?thesis
-  proof (cases x2)
-    case (ArithAtom x1)
-    then show ?thesis 
-      using Neg assms by auto 
-  next
-    case (BoolAtom x2)
-    then show ?thesis
-       using Neg assms by auto 
-  qed
-qed
-
-lemma holds_lit_valid: \<open>holds_lit v \<beta> L \<or> holds_lit v \<beta> (- L)\<close>
-  using holds_lit_neg by blast
-
+(* Lemma was needed for old locale assumption
 lemma theory_implies_prop: 
   assumes cons: \<open>consistent_interp I\<close> 
       and atms: \<open>atm_of ` I = atms_of_mm N\<close> 
@@ -122,9 +59,10 @@ proof
   then show \<open>I \<Turnstile>m N\<close>
     by (simp add: true_cls_def true_cls_mset_def)
 qed
+*)
 
 subsection \<open>The interpretation\<close>
-text \<open>The locale axioms are shown in order of appearance\<close>
+text \<open>The locale axioms are shown in order of appearance in \<^file>\<open>../DPLL_T.thy\<close>\<close>
 lemma ax1:
   assumes check: \<open>theory_check_mia I P\<close> 
        and tent: \<open>theory_entails_clauses_mia P {#C#}\<close> 
@@ -137,7 +75,7 @@ proof(rule ccontr)
     using tent unfolding theory_entails_clauses_mia_def
     by auto 
   assume \<open>\<not> I \<Turnstile> C\<close>
-  then have all: \<open>\<forall>L \<in># C. -L \<in> I\<close>
+  then have all: \<open>\<forall>L \<in># C. -L \<in> I\<close> \<comment> \<open>Because all atoms of C are in I\<close>
     using atms by (metis atm_of_in_atm_of_set_in_uminus atms_of_def in_set_image_subsetD insert_DiffM true_cls_add_mset) 
   then show \<open>False\<close>
     using ex holds_lit_conflict holds by blast
@@ -156,7 +94,7 @@ next
   then show ?thesis 
     unfolding theory_check_mia_def
   proof(intro disjI2)
-    let ?C = \<open>{#- L. L \<in># mset_set I#}\<close>
+    let ?C = \<open>{#- L. L \<in># mset_set I#}\<close> \<comment> \<open>Is a prop. conflict, theory entailed and simple\<close>
     assume A1: \<open>\<not> (\<exists>v \<beta>. (wf_integral v P) \<and> (\<forall>L \<in> I. holds_lit v \<beta> L))\<close>
     have \<open>finite (atm_of ` I)\<close> by (simp add: assms(2)) 
     moreover have \<open>I \<subseteq> Pos ` (atm_of ` I) \<union> Neg ` (atm_of ` I)\<close> by (smt (cvc5, interleave) Set.basic_monos(7) Un_subset_iff imageI imageI literal.exhaust_sel subsetI) 
@@ -166,7 +104,7 @@ next
     have atmsub: \<open>atms_of ?C \<subseteq> atm_of ` I\<close> using fin by (metis atms_of_def atms_of_pNeg finite_set_mset_mset_set pNeg_def set_eq_subset)
     have dis: \<open>distinct_mset ?C\<close> by (metis distinct_mset_pNeg_iff is_mset_set pNeg_def)
     have taut: \<open>\<not>tautology ?C\<close> using assms(1) cnot consistent_CNot_not_tautology by blast 
-    have tent: \<open>theory_entails_clauses_mia P {#?C#}\<close>
+    have tent: \<open>theory_entails_clauses_mia P {#?C#}\<close> \<comment> \<open>The main proof obligation is the entailment\<close>
       unfolding theory_entails_clauses_mia_def
       proof(intro allI impI ballI)
       fix v \<beta> C
@@ -177,7 +115,7 @@ next
         assume A3: \<open>\<not> ?thesis\<close>
         then have \<open>(\<forall>L\<in>#?C. holds_lit v \<beta> (-L))\<close>
           using holds_lit_neg by auto
-        then show \<open>False\<close>
+        then show \<open>False\<close> \<comment> \<open>can not hold as -L are the literals of I which is \<T> inconsistent\<close>
           using A1 A2 A3 fin by (metis elem_mset_set holds_lit_neg image_msetI)
       qed
       then show \<open>Multiset.Bex C (holds_lit v \<beta>)\<close>
@@ -238,15 +176,14 @@ interpretation theory_mia: theory_problem theory_entails_clauses_mia theory_chec
   subgoal for I N P using ax3 by auto
   done
 
-thm theory_mia.dpll\<^sub>\<T>_sound
-
 subsection \<open>Soundness\<close>
 text 
 \<open>
-  We can now establish an equivalence between the notion of theory satisfaction of a clause set \<open>N\<close> 
-  and the satisfaction of the literals over the theory. 
+  We can now establish an equivalence between the notion of abstract theory satisfaction of 
+  a clause set \<open>N\<close> and the satisfaction of the literals over the theory. This is not yet the final
+  theorem that links to the MIA decision procedure.
 \<close>
-lemma satisfiable\<^sub>\<T>_iff_model: \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N) 
+theorem satisfiable\<^sub>\<T>_iff_model: \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N) 
                               \<longleftrightarrow> (\<exists>v \<beta>. wf_integral v P \<and> (\<forall>C \<in># N. (\<exists>L \<in># C. holds_lit v \<beta> L)))\<close>
 proof 
   assume \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N)\<close>
@@ -258,14 +195,14 @@ proof
   then obtain v \<beta> where integral: \<open>(wf_integral v P)\<close> and holds: \<open>(\<forall>L \<in> I. holds_lit v \<beta> L)\<close>
     using check by (auto simp: theory_check_mia_def)
   show \<open>\<exists>v \<beta>. wf_integral v P \<and> (\<forall>C\<in>#N. \<exists>L\<in>#C. holds_lit v \<beta> L)\<close>
-  proof (rule exI[where x = v], rule exI[where x = \<beta>], rule conjI)
+  proof (rule exI[of _ v], rule exI[of _ \<beta>], rule conjI)
     show \<open>wf_integral v P\<close> using integral by auto
     show \<open>\<forall>C\<in>#N. \<exists>L\<in>#C. holds_lit v \<beta> L\<close> 
     proof (rule ccontr)
       assume \<open>\<not> (\<forall>C\<in>#N. \<exists>L\<in>#C. holds_lit v \<beta> L)\<close>
       then obtain D where inN: \<open>D \<in># N\<close> and all: \<open>\<forall>L\<in>#D. \<not> holds_lit v \<beta> L\<close>
         by blast 
-      then show \<open>False\<close>
+      then show \<open>False\<close> \<comment> \<open>sat tells us there is a L in I for which holds_lit must hold\<close>
         using holds sat by (meson true_cls_def true_clss_def true_lit_def) 
     qed
   qed
@@ -311,7 +248,7 @@ next
       qed
     qed
   qed
-  show \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N)\<close>
+  show \<open>theory_mia.satisfiable\<^sub>\<T> P (set_mset N)\<close> \<comment> \<open>Follows straightforward by construction of ?I\<close>
     unfolding theory_mia.satisfiable\<^sub>\<T>_def 
     using 1 2 3 4 by auto 
 qed
