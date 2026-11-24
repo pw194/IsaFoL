@@ -95,6 +95,11 @@ next
   qed
 qed
 
+corollary mia_solver_correct:
+  \<open>theory_problem.\<T>_solver_correct theory_check_mia
+     (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) (set Is) N\<close>
+  sorry
+
 definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>dpll_mia c Is F = (let N = to_cnf F;
       (M, _) = DPLL_T_partial (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) ([], N);

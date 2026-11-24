@@ -106,7 +106,21 @@ definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_
   \<open>mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
 lemma mia_solver_correct: \<open>theory_problem.\<T>_solver_correct theory_check_mia (mia_\<T>_solver c Is) (int_vars_set Is) (preprocess_formula (int_vars_set Is) F)\<close>
-  sorry
+proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms])
+  fix Ms
+  assume cons:  \<open>consistent_interp (set Ms)\<close> 
+      and atms: \<open>atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset (preprocess_formula (int_vars_set Is) F)))\<close>
+  show \<open>mia_\<T>_solver c Is Ms \<longleftrightarrow> theory_check_mia (set Ms) (int_vars_set Is)\<close>
+  proof
+    assume \<open>mia_\<T>_solver c Is Ms\<close>
+    then show \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+      sorry
+  next
+    assume \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+    then show \<open>mia_\<T>_solver c Is Ms\<close>
+      sorry
+  qed
+qed
 
 definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>dpll_mia c Is F = (let II = int_vars_of_list Is;
