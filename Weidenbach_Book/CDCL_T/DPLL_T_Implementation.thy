@@ -83,7 +83,7 @@ proof -
     using step that unfolding DPLL_T_step_def
     by (auto simp: Let_def split: prod.splits)
   moreover have ?thesis if I1: \<open>DPLL_step (Ms, N) = (Ms', N')\<close>
-  proof - \<comment> \<open>If a step on W occured, we know by the abstract calculus that it is also a \<T> step\<close>
+  proof - \<comment> \<open>If a step on W occurred, we know by the abstract calculus that it is also a \<T> step\<close>
     have \<open>dpll\<^sub>W (toS Ms N) (toS Ms' N')\<close> using DPLL_step_is_a_dpll\<^sub>W_step[OF I1[symmetric] neq] 
       by auto 
     then show ?thesis by (rule dpll\<^sub>W_step)
