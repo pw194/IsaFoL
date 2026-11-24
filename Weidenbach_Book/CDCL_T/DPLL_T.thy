@@ -59,7 +59,7 @@ text
   I try a simulation. Further, the new backtrack rule does not talk about any clause, but
   simply allows to check the consistency of the current trail if at least one decision is present.
   That is, my interpretation of DPLL(\<T>) is the standard DPLL_W with the addition of passing its
-  trail to the \<T>-solver.
+  (partial) trail to the \<T>-solver.
 \<close>
 inductive dpll\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> bool\<close> for P where
   dpll\<^sub>W_step: \<open>dpll\<^sub>W S S' \<Longrightarrow>  dpll\<^sub>\<T> P S S'\<close> |
@@ -96,8 +96,7 @@ lemma simple_clss_theory_distinct: \<open>distinct_mset (simple_clss_theory P N)
 
 lemma set_mset_simple_clss_theory:
   \<open>set_mset (simple_clss_theory P N) = {C \<in> simple_clss (atms_of_mm N). P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}}\<close>
-  unfolding simple_clss_theory_def using simple_clss_theory_distinct
-  by (auto simp: simple_clss_finite)
+  by (auto simp: simple_clss_finite simple_clss_theory_def simple_clss_theory_distinct)
 
 text 
 \<open>
@@ -125,20 +124,20 @@ lemma atms_of_mm_simple_clss_theory_subset:
 
 lemma atms_of_mm_state\<^sub>\<T>_clauses_equals[simp]:
   \<open>atms_of_mm (clauses (state\<^sub>\<T> P S)) = atms_of_mm (clauses S)\<close>
-  using atms_of_mm_simple_clss_theory_subset[of P \<open>clauses S\<close>] by (auto simp: state\<^sub>\<T>_def)
+  using atms_of_mm_simple_clss_theory_subset[of P \<open>clauses S\<close>] by auto
 
 lemma simple_clss_trail_in_simple_clss_theory:
-  assumes  inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close> 
-           and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#}\<close> 
-           and simple: \<open>D \<in> simple_clss (atm_of ` lits_of_l (trail (state\<^sub>\<T> P S)))\<close>
-         shows \<open>D \<in># simple_clss_theory P (clauses (state\<^sub>\<T> P S))\<close>
+  assumes inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close> 
+          and tent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#}\<close> 
+          and simple: \<open>D \<in> simple_clss (atm_of ` lits_of_l (trail (state\<^sub>\<T> P S)))\<close>
+  shows \<open>D \<in># simple_clss_theory P (clauses (state\<^sub>\<T> P S))\<close>
 proof -
   have \<open>atms_of D \<subseteq> (atm_of ` lits_of_l (trail (state\<^sub>\<T> P S)))\<close> using simple by (auto simp: simple_clss_def)  
   also have \<open>... \<subseteq> atms_of_mm (clauses (state\<^sub>\<T> P S))\<close> by (rule dpll\<^sub>W_all_inv_dest(2)[OF inv])
   finally have \<open>D \<in> simple_clss (atms_of_mm (clauses (state\<^sub>\<T> P S)))\<close>
     using simple by (auto simp: simple_clss_def)
   then show ?thesis
-    using ent by (simp add: set_mset_simple_clss_theory)
+    by (simp add: tent set_mset_simple_clss_theory)
 qed
 
 subsection \<open>Simulation\<close>
@@ -150,9 +149,9 @@ text
 \<close>
 
 lemma dpll\<^sub>W_step_is_state\<^sub>\<T>_step: \<open>dpll\<^sub>W S S' \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
-proof (induction rule: dpll\<^sub>W.induct)
+proof (induction rule: dpll\<^sub>W.induct) \<comment> \<open>Every rule application is still applicable in the extension\<close>
   case (propagate L C S) note[simp] = propagate
-  then have \<open>add_mset L C \<in># clauses (state\<^sub>\<T> P S)\<close> 
+  then have \<open>add_mset L C \<in># clauses (state\<^sub>\<T> P S)\<close>
     using state_clauses_subset_state\<^sub>\<T>_clauses[of S P] by auto
   moreover have conf: \<open>trail (state\<^sub>\<T> P S) \<Turnstile>as CNot C\<close> 
     by auto
@@ -176,14 +175,14 @@ next
     using dpll\<^sub>W.backtrack[of \<open>state\<^sub>\<T> P S\<close> M' L M D] by auto 
 qed
 
-lemma dpll\<^sub>W_step_is_state\<^sub>\<T>_step_star: \<open>dpll\<^sub>W\<^sup>*\<^sup>* S S' \<Longrightarrow> dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
-proof (induction rule: rtranclp.induct)
-  case (rtrancl_refl a)
+lemma dpll\<^sub>W_step_is_state\<^sub>\<T>_step_star: \<open>dpll\<^sub>W\<^sup>*\<^sup>* S S'' \<Longrightarrow> dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P S) (state\<^sub>\<T> P S'')\<close>
+proof (induction rule: rtranclp_induct)
+  case base
   then show ?case by auto
 next
-  case (rtrancl_into_rtrancl a b c)
-  then show ?case
-    using dpll\<^sub>W_step_is_state\<^sub>\<T>_step by (meson rtranclp.simps) 
+  case (step S' S'')
+  then show ?case using dpll\<^sub>W_step_is_state\<^sub>\<T>_step[OF step(2), of P]
+    rtranclp.rtrancl_into_rtrancl[of \<open>dpll\<^sub>W\<close>, OF step(3), of \<open>(state\<^sub>\<T> P S')\<close>] by auto
 qed
 
 text 
@@ -194,8 +193,8 @@ text
 lemma theory_conflict_trail:
   assumes cons: \<open>consistent_interp (lits_of_l M)\<close> and conf: \<open>\<not> lits_of_l M \<Turnstile>\<^sub>\<T> P\<close>
   obtains C where \<open>(M \<Turnstile>as CNot C)\<close> \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#})\<close> \<open>(C \<in> simple_clss (atm_of ` lits_of_l M))\<close>
-  using assms proof -
-  let ?N = \<open>mset (map (\<lambda>L. {#lit_of L#}) M)\<close>
+  using assms proof - \<comment> \<open>We can use the locale assumption to obtain the conflict for a suitable N\<close>
+  let ?N = \<open>mset (map (\<lambda>L. {#lit_of L#}) M)\<close> \<comment> \<open>Our N are the units on the trail\<close>
   have atms: \<open>(atm_of ` (lits_of_l M)) = (atms_of_mm ?N)\<close> by auto
   have ent: \<open>lits_of_l M \<Turnstile>sm ?N\<close> by (auto simp: true_clss_def lits_of_def)
   obtain D where \<open>(lits_of_l M) \<Turnstile>s CNot D\<close> \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#}\<close> \<open>D \<in> simple_clss (atm_of ` (lits_of_l M))\<close>
@@ -207,10 +206,10 @@ qed
 lemma dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step:
   \<open>dpll\<^sub>\<T> P S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
 proof (induction rule: dpll\<^sub>\<T>.induct)
-  case (dpll\<^sub>W_step S S')
+  case (dpll\<^sub>W_step S S') \<comment> \<open>A W step is trivially a \<T> step\<close>
   then show ?case using dpll\<^sub>W_step_is_state\<^sub>\<T>_step by auto
 next
-  case (backtrack\<^sub>\<T> S M' L M)
+  case (backtrack\<^sub>\<T> S M' L M) \<comment> \<open>A \<T> backtrack can be shown to be a W backtrack rule application\<close>
   then obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
     and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
     and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
@@ -226,15 +225,20 @@ next
 qed
 
 lemma dpll\<^sub>\<T>_star_is_dpll\<^sub>W_star: 
-  \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* S S' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close>
-proof (induction rule: rtranclp.induct)
-  case (rtrancl_refl a)
+  \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* S S'' \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P S) (state\<^sub>\<T> P S'')\<close>
+proof (induction rule: rtranclp_induct)
+  case base
   then show ?case by auto
 next
-  case (rtrancl_into_rtrancl a b c)
-  then show ?case
-    using dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step by (metis rtranclp.simps rtranclp_dpll\<^sub>W_all_inv) 
+  case (step S' S'')
+  then have run: \<open>dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P S) (state\<^sub>\<T> P S')\<close> by auto
+  have \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S')\<close>
+    by (rule rtranclp_dpll\<^sub>W_all_inv[OF run step(4)])
+  then have \<open>dpll\<^sub>W (state\<^sub>\<T> P S') (state\<^sub>\<T> P S'')\<close>
+    by (rule dpll\<^sub>\<T>_step_is_dpll\<^sub>W_step[OF step(2)])
+  then show ?case using rtranclp.rtrancl_into_rtrancl[of \<open>dpll\<^sub>W\<close>, OF run] by auto
 qed
+
 
 subsection \<open>Invariants\<close>
 text 
@@ -316,20 +320,21 @@ proof
                   and mutual: \<open>C \<in># N \<or> C \<in># simple_clss_theory P N\<close>
     using assms by (meson satisfiable_carac true_clss_def union_iff) 
   then show \<open>False\<close>
-  proof (elim disjE)
+  proof (elim disjE) \<comment> \<open>Our conflict is either in N or a theory lemma\<close>
     assume \<open>\<not> I \<Turnstile> C\<close> and \<open>C \<in># N\<close>
-    then show \<open>False\<close>
+    then show \<open>False\<close> \<comment> \<open>A propositional conflict in N closes immediately\<close>
       using sat true_clss_def by blast 
   next
     assume cnot: \<open>\<not> I \<Turnstile> C\<close> and simple: \<open>C \<in># simple_clss_theory P N\<close>
     then have tent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {# C #}\<close>
       using set_mset_simple_clss_theory by auto
-    then show \<open>False\<close>
+    then show \<open>False\<close> \<comment> \<open>A theory lemma conflict closes by new locale assumption\<close>
       using cnot theory_model_sound[OF check tent] atms (*New axiom instead of the old models_sat*)
           set_mset_simple_clss_theory simple simple_clssE by fastforce 
   qed
 qed
 
+subsection \<open>Conclusive states\<close>
 text 
 \<open>
   A conclusive state is not necessarily final. It tells us that we can already conclude the
@@ -343,10 +348,11 @@ definition "conclusive_dpll\<^sub>\<T>_state P S \<longleftrightarrow>
   ((trail S \<Turnstile>asm clauses S \<and> lits_of (set (trail S)) \<Turnstile>\<^sub>\<T> P) \<or> ((\<forall>L \<in> set (trail S). \<not>is_decided L)
   \<and> (\<exists>C \<in># clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C)))"
 
+text \<open>Note, the converse of this obviously doesn't hold\<close>
 lemma dpll\<^sub>\<T>_final_state_is_dpll\<^sub>W_final_state: \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> \<forall>S'. \<not>(dpll\<^sub>W S S')\<close>
   using dpll\<^sub>W_step by blast
 
-lemma dpll\<^sub>W_state\<^sub>\<T>_conclusive_is_dpll\<^sub>\<T>_conclusive: 
+lemma dpll\<^sub>W_state\<^sub>\<T>_conclusive_is_dpll\<^sub>\<T>_conclusive: (*TODO: AI Refactor*)
   \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>W_state (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>\<T>_state P S\<close>
   unfolding conclusive_dpll\<^sub>W_state_def
 proof (elim disjE)
@@ -396,7 +402,7 @@ next
     by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
 qed
 
-lemma dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state: 
+lemma dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state: (*TODO: AI Refactor*)
   \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>\<T>_state P S\<close>
 proof (rule ccontr)
   assume \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close> and \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close> and \<open>\<not> conclusive_dpll\<^sub>\<T>_state P S\<close>
@@ -439,7 +445,7 @@ qed
 lemma dpll\<^sub>W_all_inv_state\<^sub>\<T>_init: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P ([], N))\<close>
   unfolding dpll\<^sub>W_all_inv_def by auto
 
-lemma dpll\<^sub>\<T>_conclusive_state_correct:
+lemma dpll\<^sub>\<T>_conclusive_state_correct: (*TODO: AI Refactor*)
   assumes run: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close> 
           and concl: \<open>conclusive_dpll\<^sub>\<T>_state P (M, N)\<close>
   shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close> (is \<open>?A \<longleftrightarrow> ?B\<close>) (*This way of abbreviating was new to me*)
@@ -488,7 +494,8 @@ text
 \<open>
   The proof reuses the propositional development. Every \<^term>\<open>dpll\<^sub>\<T>\<close> step is a
   \<^term>\<open>dpll\<^sub>W\<close> step, so the invariants of \<^term>\<open>dpll\<^sub>W\<close> carry over, and the theory 
-  only comes into play when we show that a final state is conclusive.
+  only comes into play when we show that a final state is conclusive. The conclusive state
+  then (by the correctness lemma) allows us to conclude soundness immediately.
 \<close>
 theorem dpll\<^sub>\<T>_sound:
   assumes run\<^sub>\<T>: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close>
