@@ -135,7 +135,7 @@ theorem decide_mia_formula_unsat:
   shows "\<nexists> v \<beta>. sat_mf v Is \<beta> F"
 proof 
   define N where \<open>N = to_cnf F\<close>
-  obtain M N' where run: \<open>(M, N') = DPLL_T_partial (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) ([], N)\<close>
+  obtain M N' where run: \<open>DPLL_T_partial (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) ([], N) = (M, N')\<close>
     using assms N_def[symmetric] unfolding dpll_mia_def by (metis (lifting) prod.exhaust)
   define Ms where \<open>Ms = map lit_of M\<close>
   have dis: \<open>\<not>(\<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms) \<or> (mia_\<T>_solver c Is Ms = None)\<close>
