@@ -48,31 +48,6 @@ definition cnf :: \<open>'b mia_formula \<Rightarrow> 'b mia_atom clauses\<close
 lemma cnf_correct: \<open>sat_mf_struct v \<beta> F \<longleftrightarrow> (\<forall>C \<in># cnf F. \<exists>L \<in># C. holds_lit v \<beta> L)\<close>
   by (auto simp: cnf_def to_cnf_correct holds_cnf_def)
 
-lemma lit_to_mf_correct: \<open>holds_lit v \<beta> L \<longleftrightarrow> sat_mf_struct v \<beta> (lit_to_mf L)\<close>
-proof (cases L)
-  case (Pos x1)
-  then show ?thesis proof (cases x1)
-    case (ArithAtom x1)
-    then show ?thesis
-      by (simp add: Pos) 
-  next
-    case (BoolAtom x2)
-    then show ?thesis
-      by (simp add: Pos)
-  qed
-next
-  case (Neg x2)
-  then show ?thesis proof (cases x2)
-    case (ArithAtom x1)
-    then show ?thesis 
-      by (simp add: Neg)
-  next
-    case (BoolAtom x2)
-    then show ?thesis 
-      by (simp add: Neg)
-  qed
-qed
-
 lemma sat_conj: \<open>sat_mf_struct v \<beta> (Conj (map lit_to_mf Ms)) \<longleftrightarrow> (\<forall>L \<in> set Ms. holds_lit v \<beta> L)\<close>
 proof (induction Ms)
   case Nil

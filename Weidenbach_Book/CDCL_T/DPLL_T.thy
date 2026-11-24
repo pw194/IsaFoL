@@ -352,139 +352,125 @@ text \<open>Note, the converse of this obviously doesn't hold\<close>
 lemma dpll\<^sub>\<T>_final_state_is_dpll\<^sub>W_final_state: \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> \<forall>S'. \<not>(dpll\<^sub>W S S')\<close>
   using dpll\<^sub>W_step by blast
 
-lemma dpll\<^sub>W_state\<^sub>\<T>_conclusive_is_dpll\<^sub>\<T>_conclusive: (*TODO: AI Refactor*)
+lemma dpll\<^sub>W_state\<^sub>\<T>_conclusive_is_dpll\<^sub>\<T>_conclusive:
   \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>W_state (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>\<T>_state P S\<close>
   unfolding conclusive_dpll\<^sub>W_state_def
 proof (elim disjE)
   assume inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close>
-  assume sat: \<open>trail (state\<^sub>\<T> P S) \<Turnstile>asm clauses (state\<^sub>\<T> P S)\<close>
-  show \<open>conclusive_dpll\<^sub>\<T>_state P S\<close>
+    and sat: \<open>trail (state\<^sub>\<T> P S) \<Turnstile>asm clauses (state\<^sub>\<T> P S)\<close>
+  have cons: \<open>consistent_interp (lits_of_l (trail S))\<close>
+    using inv by auto
+  have \<open>lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>
   proof (rule ccontr)
-    assume non_conc: \<open>\<not> conclusive_dpll\<^sub>\<T>_state P S\<close>
-    then show \<open>False\<close>
-      unfolding conclusive_dpll\<^sub>\<T>_state_def
-      apply (simp only: de_Morgan_disj de_Morgan_conj)
-      apply (elim conjE)
-      apply (elim disjE)
-      subgoal using sat by force 
-      subgoal using sat by auto 
-      subgoal using sat inv 
-      proof -
-        obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
-        and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
-        and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
-           using theory_conflict_trail inv sat
-           using \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C) \<Longrightarrow> False\<close>
-             \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<forall>L\<in>set (trail S). \<not> is_decided L) \<Longrightarrow> False\<close> conclusive_dpll\<^sub>\<T>_state_def non_conc state\<^sub>\<T>_trail_equals_state
-           by (metis dpll\<^sub>W_all_inv_def) 
-        then show \<open>False\<close>
-          using sat cnot
-          using atms_of_mm_state\<^sub>\<T>_clauses_equals inv set_mset_simple_clss_theory state\<^sub>\<T>_clauses_equals_clauses
-          by (smt (cvc5, best) consistent_CNot_not dpll\<^sub>W_all_inv_def mem_Collect_eq simple_clss_mono subsetD true_annots_true_cls true_clss_def union_iff) 
-      qed
-      subgoal
-      proof -
-        obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
-        and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
-        and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
-          using theory_conflict_trail[of \<open>trail (state\<^sub>\<T> P S)\<close> P] state\<^sub>\<T>_trail_equals_state inv
-          using \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C) \<Longrightarrow> False\<close>
-            \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<forall>L\<in>set (trail S). \<not> is_decided L) \<Longrightarrow> False\<close> conclusive_dpll\<^sub>\<T>_state_def non_conc by (metis dpll\<^sub>W_all_inv_def)
-        assume \<open>\<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C)\<close>
-        then show \<open>False\<close>
-          using cnot atms_of_mm_state\<^sub>\<T>_clauses_equals ent inv set_mset_simple_clss_theory simple simple_clss_trail_in_simple_clss_theory by auto 
-      qed
-      done
+    assume \<open>\<not> lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>
+    then obtain C where conflict: \<open>trail S \<Turnstile>as CNot C\<close>
+      and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}\<close>
+      and simple: \<open>C \<in> simple_clss (atm_of ` lits_of_l (trail S))\<close>
+      using theory_conflict_trail[OF cons] by blast
+    have \<open>C \<in># simple_clss_theory P (clauses S)\<close>
+      using simple_clss_trail_in_simple_clss_theory[OF inv ent] simple
+      by (simp only: state\<^sub>\<T>_trail_equals_state simple_clss_theory_def
+          atms_of_mm_state\<^sub>\<T>_clauses_equals)
+    then have \<open>C \<in># clauses (state\<^sub>\<T> P S)\<close> by simp
+    then have \<open>lits_of_l (trail S) \<Turnstile> C\<close>
+      using sat by (auto simp: true_annots_true_cls true_clss_def)
+    then show False
+      using conflict consistent_CNot_not[OF cons]
+      by (auto simp: true_annots_true_cls)
   qed
+  then show \<open>conclusive_dpll\<^sub>\<T>_state P S\<close>
+    using sat by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
 next
   assume \<open>(\<forall>L\<in>set (trail (state\<^sub>\<T> P S)). \<not> is_decided L) \<and> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail (state\<^sub>\<T> P S) \<Turnstile>as CNot C)\<close>
   then show \<open>conclusive_dpll\<^sub>\<T>_state P S\<close>
     by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
 qed
 
-lemma dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state: (*TODO: AI Refactor*)
+lemma dpll\<^sub>\<T>_no_more_step_is_a_conclusive_state:
   \<open>(\<forall>S'. \<not>(dpll\<^sub>\<T> P S S')) \<Longrightarrow> dpll\<^sub>W_all_inv (state\<^sub>\<T> P S) \<Longrightarrow> conclusive_dpll\<^sub>\<T>_state P S\<close>
-proof (rule ccontr)
-  assume \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close> and \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close> and \<open>\<not> conclusive_dpll\<^sub>\<T>_state P S\<close>
-  then show \<open>False\<close>
-    unfolding conclusive_dpll\<^sub>\<T>_state_def
-    apply (simp only: de_Morgan_disj de_Morgan_conj)
-  proof -
-    assume A1: \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close>
-    assume A2: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close>
-    assume A3: \<open>(\<not> trail S \<Turnstile>asm clauses S \<or> \<not> lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P) 
-                \<and> (\<not> (\<forall>L\<in>set (trail S). \<not> is_decided L) \<or> \<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C))\<close>
-    then show \<open>False\<close>
-      apply (elim conjE)
-      apply (elim disjE)
-      subgoal
-        using A1 conclusive_dpll\<^sub>W_state_def dpll\<^sub>W_no_more_step_is_a_conclusive_state dpll\<^sub>W_step by blast 
-      subgoal
-        using A1 dpll\<^sub>W_step state_clauses_subset_state\<^sub>\<T>_clauses by (meson conclusive_dpll\<^sub>W_state_def dpll\<^sub>W_no_more_step_is_a_conclusive_state mset_subset_eqD) 
-      subgoal
-        using A1 backtrack\<^sub>\<T> by (metis backtrack_split_snd_hd_decided backtrack_split_some_is_decided_then_snd_has_hd list.discI list.sel(1) snd_eqD) 
-      subgoal
-      proof -
-        obtain D where cnot: \<open>((trail (state\<^sub>\<T> P S)) \<Turnstile>as CNot D)\<close> 
-        and ent: \<open>(P \<Turnstile>\<^sub>\<T>\<^sub>s {#D#})\<close> 
-        and simple: \<open>(D \<in> simple_clss (atm_of ` (lits_of_l (trail (state\<^sub>\<T> P S)))))\<close>
-          using theory_conflict_trail[of \<open>trail (state\<^sub>\<T> P S)\<close> P] state\<^sub>\<T>_trail_equals_state A1 A2
-          unfolding dpll\<^sub>W_all_inv_def
-          using A3 \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C) \<Longrightarrow> False\<close>
-            \<open>\<not> trail S \<Turnstile>asm clauses S \<Longrightarrow> \<not> (\<forall>L\<in>set (trail S). \<not> is_decided L) \<Longrightarrow> False\<close> by auto 
-        assume \<open>\<not> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail S \<Turnstile>as CNot C)\<close>
-        then show \<open>False\<close> 
-          using state\<^sub>\<T>_trail_equals_state cnot A2 atms_of_mm_state\<^sub>\<T>_clauses_equals 
-                ent set_mset_simple_clss_theory simple simple_clss_trail_in_simple_clss_theory 
-          by auto 
-      qed
-      done
+proof -
+  assume final: \<open>\<forall>S'. \<not> dpll\<^sub>\<T> P S S'\<close>
+    and inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P S)\<close>
+  have concl: \<open>conclusive_dpll\<^sub>W_state S\<close>
+    using dpll\<^sub>\<T>_final_state_is_dpll\<^sub>W_final_state[OF final]
+    by (rule dpll\<^sub>W_no_more_step_is_a_conclusive_state)
+  show ?thesis
+  proof (cases \<open>lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>)
+    case True
+    then show ?thesis
+      using concl by (auto simp: conclusive_dpll\<^sub>W_state_def conclusive_dpll\<^sub>\<T>_state_def)
+  next
+    case False
+    have no_decisions: \<open>\<forall>L\<in>set (trail S). \<not> is_decided L\<close>
+    proof (rule ccontr)
+      assume \<open>\<not> (\<forall>L\<in>set (trail S). \<not> is_decided L)\<close>
+      then obtain M' L M where split: \<open>backtrack_split (trail S) = (M', L # M)\<close>
+        using backtrack_split_some_is_decided_then_snd_has_hd by blast
+      have \<open>is_decided L\<close>
+        using backtrack_split_snd_hd_decided[of \<open>trail S\<close>] split by simp
+      then have \<open>dpll\<^sub>\<T> P S (Propagated (- (lit_of L)) () # M, clauses S)\<close>
+        by (rule backtrack\<^sub>\<T>[OF split _ False])
+      then show False using final by auto
+    qed
+    have cons: \<open>consistent_interp (lits_of_l (trail S))\<close>
+      using inv by auto
+    obtain C where conflict: \<open>trail S \<Turnstile>as CNot C\<close>
+      and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}\<close>
+      and simple: \<open>C \<in> simple_clss (atm_of ` lits_of_l (trail S))\<close>
+      using theory_conflict_trail[OF cons False] by blast
+    have \<open>C \<in># simple_clss_theory P (clauses S)\<close>
+      using simple_clss_trail_in_simple_clss_theory[OF inv ent] simple
+      by (simp only: state\<^sub>\<T>_trail_equals_state simple_clss_theory_def
+          atms_of_mm_state\<^sub>\<T>_clauses_equals)
+    then have \<open>C \<in># clauses (state\<^sub>\<T> P S)\<close> by simp
+    then show ?thesis
+      using no_decisions conflict by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
   qed
 qed
 
 lemma dpll\<^sub>W_all_inv_state\<^sub>\<T>_init: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P ([], N))\<close>
   unfolding dpll\<^sub>W_all_inv_def by auto
 
-lemma dpll\<^sub>\<T>_conclusive_state_correct: (*TODO: AI Refactor*)
-  assumes run: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close> 
-          and concl: \<open>conclusive_dpll\<^sub>\<T>_state P (M, N)\<close>
-  shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close> (is \<open>?A \<longleftrightarrow> ?B\<close>) (*This way of abbreviating was new to me*)
+lemma dpll\<^sub>\<T>_conclusive_state_correct:
+  assumes run: \<open>(dpll\<^sub>\<T> P)\<^sup>*\<^sup>* ([], N) (M, N)\<close>
+      and concl: \<open>conclusive_dpll\<^sub>\<T>_state P (M, N)\<close>
+  shows \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) \<longleftrightarrow> satisfiable\<^sub>\<T> P (set_mset N)\<close> (is \<open>?A \<longleftrightarrow> ?B\<close>)
 proof -
-  have \<open>dpll\<^sub>W\<^sup>*\<^sup>* (state\<^sub>\<T> P ([], N)) (state\<^sub>\<T> P (M, N))\<close>
-    by (rule dpll\<^sub>\<T>_star_is_dpll\<^sub>W_star[OF run dpll\<^sub>W_all_inv_state\<^sub>\<T>_init])
-  then have inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (M, N))\<close>
-    using rtranclp_dpll\<^sub>W_inv_starting_from_0 by fastforce
-  let ?I = \<open>lits_of_l M\<close>
-  show \<open>(M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P) = satisfiable\<^sub>\<T> P (set_mset N)\<close>
+  have inv: \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (M, N))\<close>
+    by (rule dpll\<^sub>\<T>_inv_rtranclp[OF run dpll\<^sub>W_all_inv_state\<^sub>\<T>_init])
+  have cons: \<open>consistent_interp (lits_of_l M)\<close>
+    using inv by auto
+  have atms: \<open>atm_of ` lits_of_l M \<subseteq> atms_of_mm N\<close>
+    using dpll\<^sub>W_all_inv_dest(2)[OF inv]
+    by (simp only: state\<^sub>\<T>_trail_equals_state atms_of_mm_state\<^sub>\<T>_clauses_equals
+        fst_conv snd_conv)
+  show ?thesis
   proof
-  assume A: \<open>?A\<close>
-  then have t_ent: \<open>?I \<Turnstile>\<^sub>\<T> P\<close> by auto
-  then have cons: \<open>consistent_interp ?I\<close> and atm: \<open>atm_of ` ?I \<subseteq> atms_of_mm N\<close>
-    using inv apply fastforce
-    using atms_of_mm_state\<^sub>\<T>_clauses_equals inv state\<^sub>\<T>_trail_equals_state by (metis dpll\<^sub>W_all_inv_dest(2) fst_eqD snd_eqD)  
-  then show \<open>?B\<close>
-    unfolding satisfiable\<^sub>\<T>_def using A theory_extendable[OF cons atm t_ent]
-    by (metis true_annots_true_cls true_clss_mono_left) 
-next
-  assume B: \<open>?B\<close>
-  show \<open>?A\<close>
-  proof (rule ccontr)
-    assume n: \<open>\<not> (M \<Turnstile>asm N \<and> lits_of_l M \<Turnstile>\<^sub>\<T> P)\<close>
-    then show \<open>False\<close>
-    proof -
-      have undec: \<open>(\<forall>L \<in> set (trail (M, N)). \<not>is_decided L)\<close> and conf: \<open>(\<exists>C \<in># clauses (state\<^sub>\<T> P (M, N)). trail (M, N) \<Turnstile>as CNot C)\<close>
-      using concl n conclusive_dpll\<^sub>\<T>_state_def by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
-    then obtain C where
-     C_in: \<open>C \<in># N + simple_clss_theory P N\<close> and
-     C_confl: \<open>trail (M, N) \<Turnstile>as CNot C\<close>
-      by auto
-    have H: \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
-      using only_propagated_vars_unsat[OF undec C_in C_confl] inv
-      using state\<^sub>\<T>_clauses_equals_clauses state\<^sub>\<T>_trail_equals_state by (metis dpll\<^sub>W_all_inv_dest(1,2) split_pairs2) 
-    then show \<open>False\<close>
-      using unsat_with_lemmas_not_satisfiable\<^sub>\<T>[OF H] B
-      by auto 
-      qed
+    assume sat: \<open>?A\<close>
+    then obtain J where check: \<open>J \<Turnstile>\<^sub>\<T> P\<close>
+      and extends: \<open>lits_of_l M \<subseteq> J\<close>
+      and total: \<open>atm_of ` J = atms_of_mm N\<close>
+      and consistent: \<open>consistent_interp J\<close>
+      using theory_extendable[OF cons atms sat[THEN conjunct2]] by auto
+    have \<open>J \<Turnstile>s set_mset N\<close>
+      by (rule true_clss_mono_left[OF _ extends])
+        (use sat in \<open>auto simp: true_annots_true_cls\<close>)
+    then show \<open>?B\<close>
+      using check total consistent by (auto simp: satisfiable\<^sub>\<T>_def)
+  next
+    assume sat: \<open>?B\<close>
+    show \<open>?A\<close>
+    proof (rule ccontr)
+      assume \<open>\<not> ?A\<close>
+      then obtain C where no_decisions: \<open>\<forall>L\<in>set M. \<not> is_decided L\<close>
+        and member: \<open>C \<in># N + simple_clss_theory P N\<close>
+        and conflict: \<open>M \<Turnstile>as CNot C\<close>
+        using concl by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
+      have \<open>unsatisfiable (set_mset (N + simple_clss_theory P N))\<close>
+        using only_propagated_vars_unsat[OF no_decisions member conflict]
+          dpll\<^sub>W_all_inv_dest(1,2)[OF inv] by simp
+      then show False
+        using unsat_with_lemmas_not_satisfiable\<^sub>\<T> sat by auto
     qed
   qed
 qed

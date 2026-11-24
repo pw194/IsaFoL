@@ -18,9 +18,15 @@ fun lit_of_arith_atom :: \<open>bool \<Rightarrow> constraint \<Rightarrow> 'b m
   \<open>lit_of_arith_atom False c = Neg (ArithAtom c)\<close> |
   \<open>lit_of_arith_atom True c = Pos (ArithAtom c)\<close>
 
+lemma atm_of_arith_atom[simp]: \<open>atm_of (lit_of_arith_atom b c) = (ArithAtom c)\<close>
+  by (cases b; auto)
+
 fun lit_of_bool_atom :: \<open>bool \<Rightarrow> 'b \<Rightarrow> 'b mia_atom literal\<close> where
   \<open>lit_of_bool_atom False x = Neg (BoolAtom x)\<close> |
   \<open>lit_of_bool_atom True x = Pos (BoolAtom x)\<close>
+
+lemma atm_of_bool_atom[simp]: \<open>atm_of (lit_of_bool_atom b x) = (BoolAtom x)\<close>
+  by (cases b; auto)
 
 fun holds_atm :: \<open>real valuation \<Rightarrow> ('b \<Rightarrow> bool) \<Rightarrow> 'b mia_atom \<Rightarrow> bool\<close> where
   \<open>holds_atm v \<beta> (ArithAtom c) = (v \<Turnstile>\<^sub>c c)\<close> |
@@ -35,5 +41,30 @@ fun lit_to_mf :: \<open>'b mia_atom literal \<Rightarrow> 'b mia_formula\<close>
 | \<open>lit_to_mf (Neg (ArithAtom c)) = Lit False c\<close>
 | \<open>lit_to_mf (Pos (BoolAtom b)) = BVar True b\<close>
 | \<open>lit_to_mf (Neg (BoolAtom b)) = BVar False b\<close>
+
+lemma lit_to_mf_correct: \<open>holds_lit v \<beta> L \<longleftrightarrow> sat_mf_struct v \<beta> (lit_to_mf L)\<close>
+proof (cases L)
+  case (Pos x1)
+  then show ?thesis proof (cases x1)
+    case (ArithAtom x1)
+    then show ?thesis
+      by (simp add: Pos) 
+  next
+    case (BoolAtom x2)
+    then show ?thesis
+      by (simp add: Pos)
+  qed
+next
+  case (Neg x2)
+  then show ?thesis proof (cases x2)
+    case (ArithAtom x1)
+    then show ?thesis 
+      by (simp add: Neg)
+  next
+    case (BoolAtom x2)
+    then show ?thesis 
+      by (simp add: Neg)
+  qed
+qed
 
 end
