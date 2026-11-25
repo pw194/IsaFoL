@@ -98,7 +98,11 @@ qed
 corollary mia_solver_correct:
   \<open>theory_problem.\<T>_solver_correct theory_check_mia
      (\<lambda>Ms. \<not> Option.is_none (mia_\<T>_solver c Is Ms)) (set Is) N\<close>
-  sorry
+proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms])
+  fix Ms
+  show \<open>(\<not> Option.is_none (mia_\<T>_solver c Is Ms)) = theory_check_mia (set Ms) (set Is)\<close>
+    using mia_solver_iff by auto
+qed
 
 definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<Rightarrow> var mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
   \<open>dpll_mia c Is F = (let N = to_cnf F;
@@ -199,7 +203,6 @@ derive (no) ccompare annotated_lit
 derive (dlist) set_impl annotated_lit
 
 export_code dpll_mia in Haskell
-
 
 definition F1 :: \<open>var mia_formula\<close> where
   \<open>F1 = Conj [(BVar True 0), Disj [(BVar False 0), (Lit True (GT (lp_monom 1 0) 5))]]\<close>

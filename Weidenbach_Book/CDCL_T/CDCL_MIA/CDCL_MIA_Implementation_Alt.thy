@@ -15,6 +15,20 @@ next
   then show ?thesis by auto
 qed
 
+fun is_EQ_c :: \<open>constraint \<Rightarrow> bool\<close> where
+  \<open>is_EQ_c (EQ p r) = True\<close> |
+  \<open>is_EQ_c _ = False\<close>
+
+lemma is_EQ_is_EQ_cs: \<open>is_EQ_c c \<Longrightarrow> \<exists>p r. c = (EQ p r)\<close>
+  by (cases c) auto
+
+fun is_EQ_mf :: \<open>'b mia_formula \<Rightarrow> bool\<close> where
+  \<open>is_EQ_mf (Lit b c) = is_EQ_c c\<close> |
+  \<open>is_EQ_mf _ = False\<close>
+
+lemma is_EQ_is_arith_atom_EQ: \<open>is_EQ_mf F \<Longrightarrow> \<exists>b p r. F = (Lit b (EQ p r))\<close>
+  by (cases F; auto simp: is_EQ_is_EQ_cs)
+
 fun remove_equalities :: \<open>'b mia_formula \<Rightarrow> 'b mia_formula\<close> where
   \<open>remove_equalities (Lit b c)  = (case c of (EQ p r) \<Rightarrow> translate_equality b p r | _ \<Rightarrow> (Lit b c))\<close>  |
   \<open>remove_equalities (BVar b x) = (BVar b x)\<close> |
@@ -85,15 +99,36 @@ lemma cnf_correct: \<open>sat_mf_struct v \<beta> F \<longleftrightarrow> (\<for
 
 fun constraint_list_of :: \<open>'b mia_atom literal list \<Rightarrow> constraint list\<close> where
   \<open>constraint_list_of [] = []\<close> |
-  \<open>constraint_list_of (x#xs) = (case x of 
-      Pos (BoolAtom x) \<Rightarrow> constraint_list_of xs |
-      Neg (BoolAtom x) \<Rightarrow> constraint_list_of xs |
-      Pos (ArithAtom c) \<Rightarrow> (case c of
-          EQ p r \<Rightarrow> constraint_list_of xs |
-          _ \<Rightarrow> negate_ineq c # constraint_list_of xs) |
-      Neg (ArithAtom c) \<Rightarrow> (case c of
-          EQ p r \<Rightarrow> constraint_list_of xs |
-          _ \<Rightarrow> negate_ineq c # constraint_list_of xs))\<close>
+  \<open>constraint_list_of (L#Ms) = (case L of 
+      Pos (BoolAtom _) \<Rightarrow> constraint_list_of Ms |
+      Neg (BoolAtom _) \<Rightarrow> constraint_list_of Ms |
+      Pos (ArithAtom c) \<Rightarrow> (if is_EQ_c c then constraint_list_of Ms else c # constraint_list_of Ms) |
+      Neg (ArithAtom c) \<Rightarrow> (if is_EQ_c c then constraint_list_of Ms else negate_ineq c # constraint_list_of Ms))\<close>
+
+lemma negate_ineq_no_EQ: \<open>\<not> (is_EQ_c c) \<Longrightarrow> \<not> (is_EQ_c (negate_ineq c))\<close>
+  by (cases c) auto
+
+lemma constraint_list_of_no_EQ: \<open>\<forall> c \<in> set (constraint_list_of Ms). \<not> (is_EQ_c c)\<close>
+proof (induction Ms)
+  case Nil
+  then show ?case by auto
+next
+  case (Cons a Ms)
+  then show ?case proof (cases a)
+    case (Pos x1)
+    then show ?thesis 
+      using Cons by (cases x1; auto split: prod.splits)
+  next
+    case (Neg x2)
+    then show ?thesis 
+      using negate_ineq_no_EQ Cons by (cases x2; auto split: prod.splits)
+  qed 
+qed
+  
+(* This does not hold gnerally *)
+lemma testlemma: 
+  \<open>\<forall>c \<in> (set (constraint_list_of Ms)). v \<Turnstile>\<^sub>c c \<longleftrightarrow> (\<forall>L \<in> set Ms. holds_lit v \<beta> L)\<close>
+  oops
 
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
@@ -105,6 +140,7 @@ lemma preprocess_formula_correct: \<open>(\<forall>x \<in> I. v x \<in> \<int>) 
 definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
   \<open>mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
+thm mixed_cs_solver_unsat
 lemma mia_solver_correct: \<open>theory_problem.\<T>_solver_correct theory_check_mia (mia_\<T>_solver c Is) (int_vars_set Is) (preprocess_formula (int_vars_set Is) F)\<close>
 proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms])
   fix Ms
@@ -116,9 +152,22 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
     then show \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
       sorry
   next
-    assume \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
-    then show \<open>mia_\<T>_solver c Is Ms\<close>
-      sorry
+    assume \<T>_cons: \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
+    then obtain v \<beta> where integral: \<open>(wf_integral v (int_vars_set Is))\<close> 
+                         and holds: \<open>(\<forall>L \<in> (set Ms). holds_lit v \<beta> L)\<close>
+      by (auto simp: theory_check_mia_def)
+    show \<open>mia_\<T>_solver c Is Ms\<close>
+    proof (rule ccontr)
+      assume neg: \<open>\<not> mia_\<T>_solver c Is Ms\<close>
+      then have noV: \<open>\<And>v. \<not> v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close> 
+            and noW: \<open>\<And> w. \<not> w \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
+        using mixed_cs_solver_unsat(1) apply (metis Option.is_none_def mia_\<T>_solver_def)
+        using mixed_cs_solver_unsat(2) neg
+        by (metis Option.is_none_def mia_\<T>_solver_def) 
+      then show \<open>False\<close>
+        using neg integral holds unfolding mia_\<T>_solver_def
+        using satisfies_real_mixed_constraints.simps sorry 
+    qed
   qed
 qed
 

@@ -335,6 +335,10 @@ proof
   qed
 qed
 
+lemma satisfiable\<^sub>\<T>_is_satisfiable_with_lemmas: \<open>satisfiable\<^sub>\<T> P (set_mset N) 
+          \<Longrightarrow> satisfiable (set_mset (N + simple_clss_theory P N))\<close>
+  using unsat_with_lemmas_not_satisfiable\<^sub>\<T> by auto
+
 subsection \<open>Conclusive states\<close>
 text 
 \<open>
@@ -362,7 +366,7 @@ proof (elim disjE)
   have cons: \<open>consistent_interp (lits_of_l (trail S))\<close>
     using inv by auto
   have \<open>lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>
-  proof (rule ccontr)
+  proof (rule ccontr) \<comment> \<open>Trail needs to be \<T> consistent otherwise some theory lemma is falsified\<close>
     assume \<open>\<not> lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>
     then obtain C where conflict: \<open>trail S \<Turnstile>as CNot C\<close>
       and ent: \<open>P \<Turnstile>\<^sub>\<T>\<^sub>s {#C#}\<close>
@@ -381,7 +385,7 @@ proof (elim disjE)
   qed
   then show \<open>conclusive_dpll\<^sub>\<T>_state P S\<close>
     using sat by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
-next
+next \<comment> \<open>Follows immediately by definition\<close>
   assume \<open>(\<forall>L\<in>set (trail (state\<^sub>\<T> P S)). \<not> is_decided L) \<and> (\<exists>C\<in>#clauses (state\<^sub>\<T> P S). trail (state\<^sub>\<T> P S) \<Turnstile>as CNot C)\<close>
   then show \<open>conclusive_dpll\<^sub>\<T>_state P S\<close>
     by (auto simp: conclusive_dpll\<^sub>\<T>_state_def)
@@ -397,7 +401,7 @@ proof -
     by (rule dpll\<^sub>W_no_more_step_is_a_conclusive_state)
   show ?thesis
   proof (cases \<open>lits_of_l (trail S) \<Turnstile>\<^sub>\<T> P\<close>)
-    case True
+    case True \<comment> \<open>Follows immediately by definition\<close>
     then show ?thesis
       using concl by (auto simp: conclusive_dpll\<^sub>W_state_def conclusive_dpll\<^sub>\<T>_state_def)
   next
@@ -411,7 +415,7 @@ proof -
         using backtrack_split_snd_hd_decided[of \<open>trail S\<close>] split by simp
       then have \<open>dpll\<^sub>\<T> P S (Propagated (- (lit_of L)) () # M, clauses S)\<close>
         by (rule backtrack\<^sub>\<T>[OF split _ False])
-      then show False using final by auto
+      then show False using final by auto \<comment> \<open>Having a decision contradicts finality of the state\<close>
     qed
     have cons: \<open>consistent_interp (lits_of_l (trail S))\<close>
       using inv by auto
