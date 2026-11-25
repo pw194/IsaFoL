@@ -264,8 +264,8 @@ lemma DPLL_T_partial_wf_induct:
                        and inv_S': \<open>dpll\<^sub>W_all_inv (state\<^sub>\<T> P (toS' S'))\<close> 
                        and step: \<open>dpll\<^sub>\<T> P (toS' S) (toS' S')\<close>
                        and snd_N: \<open>snd S' = N\<close>
-          using less.prems(1,2) solver theory_problem_axioms
-          by (metis (mono_tags, lifting) case_prod_unfold prod.exhaust_sel snd_DPLL_T_step theory_problem.DPLL_T_step_inv theory_problem.DPLL_T_step_is_a_dpll\<^sub>\<T>_step)      
+          using less.prems(1,2) solver
+          by (metis (mono_tags, lifting) case_prod_unfold prod.exhaust_sel snd_DPLL_T_step DPLL_T_step_inv DPLL_T_step_is_a_dpll\<^sub>\<T>_step)      
         then have wf_step: \<open>(S', S) \<in> {(S', S). (toS' S', toS' S) \<in> {(T', T). dpll\<^sub>W_all_inv (state\<^sub>\<T> P T) \<and> dpll\<^sub>\<T> P T T'}}\<close>
           using less.prems(2) by auto \<comment> \<open>By previous lemmas we know the new state S' is smaller\<close>
         have H: \<open>DPLL_T_partial \<T>_solver S' = S''\<close> \<comment> \<open>The new state ends up in the final state\<close>

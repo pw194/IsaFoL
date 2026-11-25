@@ -100,9 +100,9 @@ lemma holds_lit_valid: \<open>holds_lit v \<beta> L \<or> holds_lit v \<beta> (-
 
 fun lit_to_mf :: \<open>'b mia_atom literal \<Rightarrow> 'b mia_formula\<close> where
   \<open>lit_to_mf (Pos (ArithAtom c)) = Lit True c\<close>
-| \<open>lit_to_mf (Neg (ArithAtom c)) = Lit False c\<close>
-| \<open>lit_to_mf (Pos (BoolAtom b)) = BVar True b\<close>
-| \<open>lit_to_mf (Neg (BoolAtom b)) = BVar False b\<close>
+  | \<open>lit_to_mf (Neg (ArithAtom c)) = Lit False c\<close>
+  | \<open>lit_to_mf (Pos (BoolAtom b)) = BVar True b\<close>
+  | \<open>lit_to_mf (Neg (BoolAtom b)) = BVar False b\<close>
 
 lemma lit_to_mf_correct: \<open>holds_lit v \<beta> L \<longleftrightarrow> sat_mf_struct v \<beta> (lit_to_mf L)\<close>
 proof (cases L)

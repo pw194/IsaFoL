@@ -15,19 +15,27 @@ next
   then show ?thesis by auto
 qed
 
-fun is_EQ_c :: \<open>constraint \<Rightarrow> bool\<close> where
-  \<open>is_EQ_c (EQ p r) = True\<close> |
-  \<open>is_EQ_c _ = False\<close>
-
-lemma is_EQ_is_EQ_cs: \<open>is_EQ_c c \<Longrightarrow> \<exists>p r. c = (EQ p r)\<close>
-  by (cases c) auto
+definition is_EQ_c :: \<open>constraint \<Rightarrow> bool\<close> where
+  \<open>is_EQ_c c = (\<exists>p r. c = (EQ p r))\<close>
 
 fun is_EQ_mf :: \<open>'b mia_formula \<Rightarrow> bool\<close> where
   \<open>is_EQ_mf (Lit b c) = is_EQ_c c\<close> |
   \<open>is_EQ_mf _ = False\<close>
 
 lemma is_EQ_is_arith_atom_EQ: \<open>is_EQ_mf F \<Longrightarrow> \<exists>b p r. F = (Lit b (EQ p r))\<close>
-  by (cases F; auto simp: is_EQ_is_EQ_cs)
+  by (cases F; auto simp: is_EQ_c_def)
+
+definition is_EQ_atom :: \<open>'b mia_atom \<Rightarrow> bool\<close> where
+  \<open>is_EQ_atom a = (\<exists>p r. a = (ArithAtom (EQ p r)))\<close>
+
+definition is_EQ_lit :: \<open>'b mia_atom literal \<Rightarrow> bool\<close> where
+  \<open>is_EQ_lit L = is_EQ_atom (atm_of L)\<close>
+
+definition is_Arith_atom :: \<open>'b mia_atom \<Rightarrow> bool\<close> where
+  \<open>is_Arith_atom a = (\<exists>c. a = (ArithAtom c))\<close>
+
+definition is_Arith_lit :: \<open>'b mia_atom literal \<Rightarrow> bool\<close> where
+  \<open>is_Arith_lit L = (is_Arith_atom (atm_of L))\<close>
 
 fun remove_equalities :: \<open>'b mia_formula \<Rightarrow> 'b mia_formula\<close> where
   \<open>remove_equalities (Lit b c)  = (case c of (EQ p r) \<Rightarrow> translate_equality b p r | _ \<Rightarrow> (Lit b c))\<close>  |
@@ -97,6 +105,7 @@ definition cnf :: \<open>'b mia_formula \<Rightarrow> 'b mia_atom clauses\<close
 lemma cnf_correct: \<open>sat_mf_struct v \<beta> F \<longleftrightarrow> (\<forall>C \<in># cnf F. \<exists>L \<in># C. holds_lit v \<beta> L)\<close>
   by (auto simp: cnf_def to_cnf_correct holds_cnf_def)
 
+(*TODO: CHANGE is_EQ_c because no code equation*)
 fun constraint_list_of :: \<open>'b mia_atom literal list \<Rightarrow> constraint list\<close> where
   \<open>constraint_list_of [] = []\<close> |
   \<open>constraint_list_of (L#Ms) = (case L of 
@@ -125,10 +134,31 @@ next
   qed 
 qed
   
-(* This does not hold gnerally *)
 lemma testlemma: 
-  \<open>\<forall>c \<in> (set (constraint_list_of Ms)). v \<Turnstile>\<^sub>c c \<longleftrightarrow> (\<forall>L \<in> set Ms. holds_lit v \<beta> L)\<close>
-  oops
+  assumes no_EQ: \<open>(\<forall>L \<in> set Ms. \<not> (is_EQ_lit L))\<close>
+  shows \<open>(\<forall>c \<in> (set (constraint_list_of Ms)). v \<Turnstile>\<^sub>c c) \<longleftrightarrow> (\<forall>L \<in> set Ms. is_Arith_lit L \<longrightarrow> holds_lit v \<beta> L)\<close>
+proof
+  assume \<open>v \<Turnstile>\<^sub>r\<^sub>c\<^sub>s set (constraint_list_of Ms)\<close>
+  then show \<open>\<forall>L\<in>set Ms. is_Arith_lit L \<longrightarrow> holds_lit v \<beta> L\<close>
+  proof(intro ballI impI)
+    fix L
+    assume A1: \<open>v \<Turnstile>\<^sub>r\<^sub>c\<^sub>s set (constraint_list_of Ms)\<close> 
+        and A2: \<open>L \<in> set Ms\<close> 
+        and A3: \<open>is_Arith_lit L\<close>
+    then show \<open>holds_lit v \<beta> L\<close>
+    proof (cases L)
+      case (Pos x1)
+      then show ?thesis sorry
+    next
+      case (Neg x2)
+      then show ?thesis sorry
+    qed
+  qed
+next
+  assume \<open>\<forall>L\<in>set Ms. is_Arith_lit L \<longrightarrow> holds_lit v \<beta> L\<close>
+  then show \<open>v \<Turnstile>\<^sub>r\<^sub>c\<^sub>s set (constraint_list_of Ms)\<close>
+    sorry
+qed
 
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
