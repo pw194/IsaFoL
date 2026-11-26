@@ -35,6 +35,9 @@ definition is_EQ_atom :: \<open>'b mia_atom \<Rightarrow> bool\<close> where
 definition is_EQ_lit :: \<open>'b mia_atom literal \<Rightarrow> bool\<close> where
   \<open>is_EQ_lit L = is_EQ_atom (atm_of L)\<close>
 
+lemma not_is_EQ_Lit_not_EQ_atom: \<open>\<not> (is_EQ_lit L) \<Longrightarrow> \<not> (is_EQ_atom (atm_of L))\<close>
+  by (auto simp: is_EQ_lit_def is_EQ_atom_def)
+
 definition is_Arith_atom :: \<open>'b mia_atom \<Rightarrow> bool\<close> where
   \<open>is_Arith_atom a = (\<exists>c. a = (ArithAtom c))\<close>
 
@@ -319,8 +322,41 @@ next
   then show ?case by auto
 qed
 
+lemma to_cnf_no_EQ: 
+  assumes \<open>no_EQ F\<close>
+      and \<open>C \<in> set (map set (to_cnf F))\<close>
+      and \<open>L \<in> C\<close>
+    shows \<open>\<not> (is_EQ_lit L)\<close>
+using assms proof (induction F arbitrary: C L)
+  case (Conj x)
+  then show ?case by auto
+next
+  case (Disj x)
+  then show ?case sorry
+next
+  case (Lit x1a x2a)
+  then show ?case by (auto simp: is_EQ_lit_def is_EQ_atom_def)
+next
+  case (BVar x1a x2a)
+  then show ?case by (auto simp: is_EQ_lit_def is_EQ_atom_def)
+qed
+
+
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
+
+lemma preprocess_formula_no_EQ: 
+  assumes \<open>C \<in> set (map set (preprocess_formula I F))\<close> and
+          \<open>L \<in> C\<close>
+    shows \<open>\<not> (is_EQ_lit L)\<close>
+  using assms
+  by (metis preprocess_formula_def remove_equalities_no_EQ tighten_mf_no_EQ to_cnf_no_EQ) 
+
+lemma preprocess_formula_no_EQ_atom: 
+  assumes \<open>a \<in> atms_of_mm (mset (map mset (preprocess_formula (int_vars_set Is) F)))\<close> 
+  shows \<open>\<not>(is_EQ_atom a)\<close>
+  using assms preprocess_formula_no_EQ
+  by (fastforce simp: atms_of_ms_def atms_of_def is_EQ_lit_def)
 
 (*MIA_Formula.sat_tighten_mf: \<forall>x\<in>?I. ?v x \<in> \<int> \<Longrightarrow> sat_mf_struct ?v ?\<beta> (tighten_mf ?I ?f) = sat_mf_struct ?v ?\<beta> ?f*)
 lemma preprocess_formula_correct: \<open>(\<forall>x \<in> I. v x \<in> \<int>) \<Longrightarrow> sat_mf_struct v \<beta> F \<longleftrightarrow> holds_cnf v \<beta> (preprocess_formula I F)\<close>
@@ -353,8 +389,10 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
         using mixed_cs_solver_unsat(1) apply (metis Option.is_none_def mia_\<T>_solver_def)
         using mixed_cs_solver_unsat(2) neg
         by (metis Option.is_none_def mia_\<T>_solver_def) 
+      have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> using atms preprocess_formula_no_EQ sorry
       then show \<open>False\<close>
-        using neg unfolding mia_\<T>_solver_def apply simp using mixed_cs_solver_unsat constraint_list_of_correct sorry
+        using constraint_list_of_correct noV noW
+        using holds integral by fastforce 
     qed
   qed
 qed
