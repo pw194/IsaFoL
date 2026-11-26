@@ -56,6 +56,24 @@ fun remove_equalities :: \<open>'b mia_formula \<Rightarrow> 'b mia_formula\<clo
   \<open>remove_equalities (Conj FS)  = Conj (map remove_equalities FS)\<close>  |
   \<open>remove_equalities (Disj FS)  = Disj (map remove_equalities FS)\<close>
 
+lemma translate_equality_no_EQ: \<open>no_EQ (translate_equality b p r)\<close>
+  by (cases b) auto
+
+lemma remove_equalities_no_EQ: \<open>no_EQ (remove_equalities F)\<close>
+proof (induction F)
+  case (Conj x)
+  then show ?case by auto
+next
+  case (Disj x)
+  then show ?case by auto
+next
+  case (Lit x1a x2a)
+  then show ?case by (cases x2a; auto simp: translate_equality_no_EQ)
+next
+  case (BVar x1a x2a)
+  then show ?case by auto
+qed
+
 lemma remove_equalities_correct: \<open>sat_mf_struct v \<beta> F \<longleftrightarrow> sat_mf_struct v \<beta> (remove_equalities F)\<close>
 proof (induction F)
   case (Conj x)
@@ -236,6 +254,49 @@ next
   qed
 qed
 
+lemma is_EQ_c_not_is_no_EQ_lit: \<open>\<not>is_EQ_c c \<Longrightarrow> no_EQ (Lit b c)\<close>
+  by (cases c) auto
+
+lemma round_ineq_no_EQ: \<open>\<not>is_EQ_c c \<Longrightarrow> \<not>is_EQ_c (round_ineq c)\<close>
+  by (cases c) auto
+
+lemma false_no_EQ: \<open>no_EQ mf_false\<close>
+  by (auto simp: mf_false_def)
+
+lemma true_no_EQ: \<open>no_EQ mf_true\<close>
+  by (auto simp: mf_true_def)
+
+lemma tighten_lit_no_EQ: \<open>no_EQ (Lit b c) \<Longrightarrow> no_EQ (tighten_mf I (Lit b c))\<close>
+  by (cases c) (auto simp: Let_def tighten_lit_def split: if_splits)
+
+lemma no_EQ_mk_disj:
+  assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
+  shows \<open>no_EQ (mk_disj FS)\<close>
+  sorry
+
+lemma no_EQ_mk_conj:
+  assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
+  shows \<open>no_EQ (mk_conj FS)\<close>
+  sorry
+
+lemma tighten_mf_no_EQ: \<open>no_EQ F \<Longrightarrow> no_EQ (tighten_mf I F)\<close>
+proof (induction F)
+  case (Conj x)
+  then show ?case
+    by (simp add: no_EQ_mk_conj) 
+next
+  case (Disj x)
+  then show ?case 
+    by (simp add: no_EQ_mk_disj) 
+next
+  case (Lit x1a x2a)
+  then show ?case
+    using tighten_lit_no_EQ by auto 
+next
+  case (BVar x1a x2a)
+  then show ?case by auto
+qed
+
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
 
@@ -271,7 +332,7 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
         using mixed_cs_solver_unsat(2) neg
         by (metis Option.is_none_def mia_\<T>_solver_def) 
       then show \<open>False\<close>
-        sorry
+        using neg unfolding mia_\<T>_solver_def apply simp using mixed_cs_solver_unsat constraint_list_of_correct sorry
     qed
   qed
 qed
