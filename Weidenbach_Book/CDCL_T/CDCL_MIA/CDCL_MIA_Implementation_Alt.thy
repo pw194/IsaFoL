@@ -322,35 +322,41 @@ next
   then show ?case by auto
 qed
 
-lemma to_cnf_no_EQ: 
-  assumes \<open>no_EQ F\<close>
-      and \<open>C \<in> set (map set (to_cnf F))\<close>
-      and \<open>L \<in> C\<close>
-    shows \<open>\<not> (is_EQ_lit L)\<close>
-using assms proof (induction F arbitrary: C L)
+definition clauses_no_EQ :: \<open>'b mia_atom literal list list \<Rightarrow> bool\<close> where
+  \<open>clauses_no_EQ CS \<longleftrightarrow> (\<forall>C \<in> set CS. \<forall>L \<in> set C. \<not> is_EQ_lit L)\<close>
+
+lemma cnf_disj_no_EQ:
+  \<open>clauses_no_EQ A \<Longrightarrow> clauses_no_EQ B \<Longrightarrow> clauses_no_EQ (cnf_disj A B)\<close>
+  by (auto simp: clauses_no_EQ_def cnf_disj_def)
+
+lemma foldr_no_EQ_disj:
+  \<open>\<forall>CS \<in> set CSS. clauses_no_EQ CS \<Longrightarrow> clauses_no_EQ (foldr cnf_disj CSS [[]])\<close>
+  by (induction CSS) (auto simp: cnf_disj_no_EQ, simp add: clauses_no_EQ_def)
+
+lemma to_cnf_no_EQ: \<open>no_EQ F \<Longrightarrow> clauses_no_EQ (to_cnf F)\<close>
+proof (induction F)
   case (Conj x)
-  then show ?case by auto
+  then show ?case by (auto simp: clauses_no_EQ_def cnf_disj_no_EQ)
 next
   case (Disj x)
-  then show ?case sorry
+  then show ?case by (auto simp: foldr_no_EQ_disj)
 next
   case (Lit x1a x2a)
-  then show ?case by (auto simp: is_EQ_lit_def is_EQ_atom_def)
+  then show ?case by (auto simp: clauses_no_EQ_def is_EQ_lit_def is_EQ_atom_def)
 next
   case (BVar x1a x2a)
-  then show ?case by (auto simp: is_EQ_lit_def is_EQ_atom_def)
-qed
-
+  then show ?case by (auto simp: clauses_no_EQ_def is_EQ_lit_def is_EQ_atom_def)
+qed 
 
 definition preprocess_formula :: \<open>var set \<Rightarrow> 'b mia_formula \<Rightarrow> 'b mia_atom literal list list\<close> where
   \<open>preprocess_formula I F = to_cnf (tighten_mf I (remove_equalities F))\<close>
 
 lemma preprocess_formula_no_EQ: 
-  assumes \<open>C \<in> set (map set (preprocess_formula I F))\<close> and
-          \<open>L \<in> C\<close>
+  assumes \<open>C \<in> set (preprocess_formula I F)\<close> and
+          \<open>L \<in> set C\<close>
     shows \<open>\<not> (is_EQ_lit L)\<close>
-  using assms
-  by (metis preprocess_formula_def remove_equalities_no_EQ tighten_mf_no_EQ to_cnf_no_EQ) 
+   using assms to_cnf_no_EQ[OF tighten_mf_no_EQ[OF remove_equalities_no_EQ]]
+   by (metis clauses_no_EQ_def preprocess_formula_def) 
 
 lemma preprocess_formula_no_EQ_atom: 
   assumes \<open>a \<in> atms_of_mm (mset (map mset (preprocess_formula (int_vars_set Is) F)))\<close> 
@@ -365,7 +371,7 @@ lemma preprocess_formula_correct: \<open>(\<forall>x \<in> I. v x \<in> \<int>) 
 definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
   \<open>mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
-thm mixed_cs_solver_unsat
+thm mixed_cs_solver_unsat mixed_cs_solver_sat
 lemma mia_solver_correct: \<open>theory_problem.\<T>_solver_correct theory_check_mia (mia_\<T>_solver c Is) (int_vars_set Is) (preprocess_formula (int_vars_set Is) F)\<close>
 proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms])
   fix Ms
@@ -373,9 +379,38 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
       and atms: \<open>atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset (preprocess_formula (int_vars_set Is) F)))\<close>
   show \<open>mia_\<T>_solver c Is Ms \<longleftrightarrow> theory_check_mia (set Ms) (int_vars_set Is)\<close>
   proof
+    define \<beta> where \<open>\<beta> = (\<lambda> b. Pos (BoolAtom b) \<in> set Ms)\<close>
     assume \<open>mia_\<T>_solver c Is Ms\<close>
+    then obtain v where mcs:  \<open>v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close> 
+                    and rmcs: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
+      using mixed_cs_solver_sat
+      by (metis is_none_simps(1) mia_\<T>_solver_def option.exhaust) 
+    then have integral: \<open>wf_integral (of_rat_val v) (int_vars_set Is)\<close>
+      by auto 
+    have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> using atms preprocess_formula_no_EQ_atom
+        by (metis imageI is_EQ_lit_def subset_iff) 
+    then have H: \<open>\<And>\<beta>. (\<forall>L \<in> set Ms. is_Arith_lit L \<longrightarrow> holds_lit (of_rat_val v) \<beta> L)\<close>
+      using constraint_list_of_correct
+      using rmcs satisfies_real_mixed_constraints.simps by blast 
+    have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close> 
+    proof
+      fix L
+      assume A: \<open>L \<in> set Ms\<close>
+      then show \<open>holds_lit (of_rat_val v) \<beta> L\<close>
+        using \<beta>_def H[of \<beta>] proof (cases L)
+        case (1 z2)
+        then show ?thesis
+          using H \<beta>_def A cons
+          by (smt (verit, best) consistent_interp_def holds_atm.elims(2,3) holds_lit.elims(3) is_Arith_atom_def is_Arith_lit_def literal.distinct(1) literal.sel(1) uminus_Neg
+              uminus_literal_def) 
+      next
+        case (2 z1 z2)
+        then show ?thesis
+          using A H \<beta>_def cons by (metis (no_types, lifting) consistent_interp_def holds_atm.elims(2,3) holds_lit.elims(3) is_Arith_atom_def is_Arith_lit_def literal.sel(1,2) uminus_Neg) 
+      qed
+    qed
     then show \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
-      sorry
+      unfolding theory_check_mia_def using integral by auto 
   next
     assume \<T>_cons: \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
     then obtain v \<beta> where integral: \<open>(wf_integral v (int_vars_set Is))\<close> 
@@ -389,7 +424,8 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
         using mixed_cs_solver_unsat(1) apply (metis Option.is_none_def mia_\<T>_solver_def)
         using mixed_cs_solver_unsat(2) neg
         by (metis Option.is_none_def mia_\<T>_solver_def) 
-      have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> using atms preprocess_formula_no_EQ sorry
+      have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> using atms preprocess_formula_no_EQ_atom
+        by (metis imageI is_EQ_lit_def subset_iff) 
       then show \<open>False\<close>
         using constraint_list_of_correct noV noW
         using holds integral by fastforce 
@@ -405,7 +441,6 @@ definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<
                               Ms = map lit_of M in if \<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms
                                   then map_option (\<lambda>w. (w, \<lambda>b. Pos (BoolAtom b) \<in> set Ms))
                                       (mixed_cs_solver c (constraint_list_of Ms) II) else None))\<close>
-
 
 subsection \<open>Final theorems\<close>
 theorem dpll_mia_formula_sat: 
