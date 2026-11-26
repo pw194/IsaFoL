@@ -269,15 +269,37 @@ lemma true_no_EQ: \<open>no_EQ mf_true\<close>
 lemma tighten_lit_no_EQ: \<open>no_EQ (Lit b c) \<Longrightarrow> no_EQ (tighten_mf I (Lit b c))\<close>
   by (cases c) (auto simp: Let_def tighten_lit_def split: if_splits)
 
+lemma no_EQ_disj_arg:
+  assumes \<open>no_EQ F\<close>
+  shows \<open>\<forall>G \<in> set (disj_arg F). no_EQ G\<close>
+  using assms by (cases F) auto
+
+lemma no_EQ_conj_arg:
+  assumes \<open>no_EQ F\<close>
+  shows \<open>\<forall>G \<in> set (conj_arg F). no_EQ G\<close>
+  using assms by (cases F) auto
+
+lemma no_EQ_concat_disj:
+  assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
+  shows \<open>\<forall>G \<in> set (concat (map disj_arg FS)). no_EQ G\<close>
+  using assms no_EQ_disj_arg by auto
+
+lemma no_EQ_concat_conj:
+  assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
+  shows \<open>\<forall>G \<in> set (concat (map conj_arg FS)). no_EQ G\<close>
+  using assms no_EQ_conj_arg by auto
+
 lemma no_EQ_mk_disj:
   assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
   shows \<open>no_EQ (mk_disj FS)\<close>
-  sorry
+  using assms
+  by (metis mk_disj_cases no_EQ.simps(4) no_EQ_concat_disj true_no_EQ) 
 
 lemma no_EQ_mk_conj:
   assumes \<open>\<forall>F\<in>set FS. no_EQ F\<close>
   shows \<open>no_EQ (mk_conj FS)\<close>
-  sorry
+  using assms
+  by (metis false_no_EQ mk_conj_cases no_EQ.simps(3) no_EQ_concat_conj)
 
 lemma tighten_mf_no_EQ: \<open>no_EQ F \<Longrightarrow> no_EQ (tighten_mf I F)\<close>
 proof (induction F)
