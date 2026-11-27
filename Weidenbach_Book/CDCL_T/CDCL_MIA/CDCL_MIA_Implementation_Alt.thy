@@ -371,7 +371,32 @@ lemma preprocess_formula_correct: \<open>(\<forall>x \<in> I. v x \<in> \<int>) 
 definition mia_\<T>_solver :: \<open>'c :: lira_solver_config \<Rightarrow> int_vars \<Rightarrow> var mia_atom literal list \<Rightarrow> bool\<close> where
   \<open>mia_\<T>_solver c Is = (\<lambda>Ms. \<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) Is))\<close>
 
-thm mixed_cs_solver_unsat mixed_cs_solver_sat
+(*AI Refactor of common proof parts*)
+lemma holds_bool_lit_from_list:
+  assumes \<open>consistent_interp (set Ms)\<close> and \<open>L \<in> set Ms\<close> and \<open>\<not> is_Arith_lit L\<close>
+  shows \<open>holds_lit v (\<lambda>b. Pos (BoolAtom b) \<in> set Ms) L\<close>
+  using assms
+  by (cases L; rename_tac a; case_tac a) (*I have no idea what rename_tac is*)
+     (auto simp: consistent_interp_def is_Arith_lit_def is_Arith_atom_def)
+
+lemma mia_solver_model:
+  assumes sol: \<open>mixed_cs_solver c (constraint_list_of Ms) Is = Some v\<close>
+    and cons: \<open>consistent_interp (set Ms)\<close>
+    and no_EQ: \<open>\<forall>L \<in> set Ms. \<not> is_EQ_lit L\<close>
+  shows \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) (\<lambda>b. Pos (BoolAtom b) \<in> set Ms) L\<close>
+    and \<open>wf_integral (of_rat_val v) (int_vars_set Is)\<close>
+proof -
+  have rmcs: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), int_vars_set Is)\<close>
+    using mixed_cs_solver_sat(2) sol by blast
+  then show \<open>wf_integral (of_rat_val v) (int_vars_set Is)\<close>
+    by auto
+  have arith: \<open>\<forall>L \<in> set Ms. is_Arith_lit L \<longrightarrow> holds_lit (of_rat_val v) \<beta> L\<close> for \<beta>
+    using constraint_list_of_correct[OF no_EQ] rmcs by auto
+  show \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) (\<lambda>b. Pos (BoolAtom b) \<in> set Ms) L\<close>
+    using arith holds_bool_lit_from_list[OF cons] by blast
+qed
+(* -------------------------------------------------------------------------------- *)
+
 lemma mia_solver_correct: \<open>theory_problem.\<T>_solver_correct theory_check_mia (mia_\<T>_solver c Is) (int_vars_set Is) (preprocess_formula (int_vars_set Is) F)\<close>
 proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_axioms])
   fix Ms
@@ -392,23 +417,8 @@ proof (intro theory_problem.\<T>_solver_correctI[OF theory_mia.theory_problem_ax
     then have H: \<open>\<And>\<beta>. (\<forall>L \<in> set Ms. is_Arith_lit L \<longrightarrow> holds_lit (of_rat_val v) \<beta> L)\<close>
       using constraint_list_of_correct
       using rmcs satisfies_real_mixed_constraints.simps by blast 
-    have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close> 
-    proof
-      fix L
-      assume A: \<open>L \<in> set Ms\<close>
-      then show \<open>holds_lit (of_rat_val v) \<beta> L\<close>
-        using \<beta>_def H[of \<beta>] proof (cases L)
-        case (1 z2)
-        then show ?thesis
-          using H \<beta>_def A cons
-          by (smt (verit, best) consistent_interp_def holds_atm.elims(2,3) holds_lit.elims(3) is_Arith_atom_def is_Arith_lit_def literal.distinct(1) literal.sel(1) uminus_Neg
-              uminus_literal_def) 
-      next
-        case (2 z1 z2)
-        then show ?thesis
-          using A H \<beta>_def cons by (metis (no_types, lifting) consistent_interp_def holds_atm.elims(2,3) holds_lit.elims(3) is_Arith_atom_def is_Arith_lit_def literal.sel(1,2) uminus_Neg) 
-      qed
-    qed
+    have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close>
+      using H \<beta>_def cons holds_bool_lit_from_list by blast 
     then show \<open>theory_check_mia (set Ms) (int_vars_set Is)\<close>
       unfolding theory_check_mia_def using integral by auto 
   next
@@ -443,10 +453,49 @@ definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<
                                       (mixed_cs_solver c (constraint_list_of Ms) II) else None))\<close>
 
 subsection \<open>Final theorems\<close>
+lemma mia_final_trail:
+  assumes N: \<open>N = preprocess_formula (int_vars_set II) F\<close>
+    and run: \<open>DPLL_T_partial (mia_\<T>_solver c II) ([], N) = (M, N')\<close>
+  shows \<open>consistent_interp (set (map lit_of M))\<close>
+    and \<open>atm_of ` set (map lit_of M) \<subseteq> atms_of_mm (mset (map mset N))\<close>
+    and \<open>N' = N\<close>
+  sorry
+
 theorem dpll_mia_formula_sat: 
   assumes "dpll_mia c Is F = Some (v, \<beta>)"
   shows "sat_mf (of_rat_val v) Is \<beta> F"
-  sorry
+proof -
+  define II where \<open>II = int_vars_of_list Is\<close>
+  define I where \<open>I = int_vars_set II\<close>
+  define N where \<open>N = (preprocess_formula I F)\<close>
+  obtain M N' where run: \<open>DPLL_T_partial (mia_\<T>_solver c II) ([], N) = (M, N')\<close>
+    using assms using prod.exhaust by blast 
+  define Ms where \<open>Ms = map lit_of M\<close>
+  have sat: \<open>\<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms\<close>
+    using assms run unfolding dpll_mia_def N_def II_def I_def Ms_def
+    by (auto simp: Let_def split: if_splits prod.splits)
+  have vals: \<open>Some (v, \<beta>) = map_option (\<lambda>w. (w, \<lambda>b. Pos (BoolAtom b) \<in> set Ms)) (mixed_cs_solver c (constraint_list_of Ms) II)\<close>
+    using assms run unfolding dpll_mia_def N_def II_def I_def Ms_def
+    by (auto simp: Let_def split: if_splits prod.splits)
+  then have someV: \<open>Some v = (mixed_cs_solver c (constraint_list_of Ms) II)\<close>
+    by (smt (cvc5, dec_internal_enum_inst_sum) Pair_inject map_option_eq_Some) 
+  then have mcs: \<open>v \<Turnstile>\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), I)\<close> 
+       and rmcs: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s (set (constraint_list_of Ms), I)\<close>
+    using mixed_cs_solver_sat(1) using I_def apply metis using mixed_cs_solver_sat(2) someV
+    using I_def by metis
+  then have 1: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s ({}, set Is)\<close> 
+    using I_def II_def by auto
+
+
+  have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> sorry
+  then have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close> sorry
+  then have \<open>holds_cnf (of_rat_val v) \<beta> N\<close> 
+    using sat unfolding holds_cnf_def by blast 
+  then have 2: \<open>sat_mf_struct (of_rat_val v) \<beta> F\<close>
+    using N_def preprocess_formula_correct rmcs by auto 
+  show ?thesis
+    using 1 2 by (auto simp: sat_mf_def)
+qed
 
 theorem decide_mia_formula_unsat: 
   assumes "dpll_mia c Is f = None"
