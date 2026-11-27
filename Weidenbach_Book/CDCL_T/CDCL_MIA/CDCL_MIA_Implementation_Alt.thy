@@ -453,13 +453,29 @@ definition dpll_mia :: \<open>'c :: lira_solver_config \<Rightarrow> var list \<
                                       (mixed_cs_solver c (constraint_list_of Ms) II) else None))\<close>
 
 subsection \<open>Final theorems\<close>
-lemma mia_final_trail:
+lemma final_trail:
   assumes N: \<open>N = preprocess_formula (int_vars_set II) F\<close>
     and run: \<open>DPLL_T_partial (mia_\<T>_solver c II) ([], N) = (M, N')\<close>
   shows \<open>consistent_interp (set (map lit_of M))\<close>
     and \<open>atm_of ` set (map lit_of M) \<subseteq> atms_of_mm (mset (map mset N))\<close>
     and \<open>N' = N\<close>
-  sorry
+proof -
+  have init: \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (int_vars_set II) (toS [] N))\<close> and
+       init': \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (int_vars_set II) (toS' ([], N)))\<close>
+    by (auto simp: dpll\<^sub>W_all_inv_def)
+  have H1: \<open>N = N'\<close> and H2: \<open>(theory_mia.dpll\<^sub>\<T> (int_vars_set II))\<^sup>*\<^sup>* (toS' ([], N)) (toS' (M, N'))\<close> 
+    using theory_problem.DPLL_T_partial_inv_fix[OF theory_mia.theory_problem_axioms init run]
+      N mia_solver_correct by blast+
+  then have final_inv: \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (int_vars_set II) (toS' (M, N')))\<close>
+    using theory_mia.dpll\<^sub>\<T>_inv_rtranclp[OF H2 init'] by auto
+  show \<open>consistent_interp (set (map lit_of M))\<close>
+    using final_inv set_lit_of_is_lits_of_l[of M] unfolding dpll\<^sub>W_all_inv_def by auto
+  show \<open>atm_of ` set (map lit_of M) \<subseteq> atms_of_mm (mset (map mset N))\<close>
+    using final_inv set_lit_of_is_lits_of_l[of M] unfolding dpll\<^sub>W_all_inv_def
+    using H1 by (metis fst_eqD snd_eqD split_conv theory_mia.atms_of_mm_state\<^sub>\<T>_clauses_equals theory_mia.state\<^sub>\<T>_trail_equals_state)  
+  show \<open>N' = N\<close>
+    by (rule H1[symmetric])
+qed
 
 theorem dpll_mia_formula_sat: 
   assumes "dpll_mia c Is F = Some (v, \<beta>)"
@@ -485,10 +501,16 @@ proof -
     using I_def by metis
   then have 1: \<open>of_rat_val v \<Turnstile>\<^sub>r\<^sub>m\<^sub>c\<^sub>s ({}, set Is)\<close> 
     using I_def II_def by auto
-
-
-  have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> sorry
-  then have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close> sorry
+  have atms: \<open>atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N))\<close> and 
+       cons: \<open>consistent_interp (set Ms)\<close>
+    using final_trail[of N II F c M N'] I_def Ms_def N_def run by blast+
+  then have \<open>\<forall>L\<in>set Ms. \<not> is_EQ_lit L\<close> 
+    using preprocess_formula_no_EQ_atom
+    using I_def N_def by (metis in_set_image_subsetD is_EQ_lit_def)
+  then have H: \<open>(\<forall>L \<in> set Ms. is_Arith_lit L \<longrightarrow> holds_lit (of_rat_val v) \<beta> L)\<close>
+    using constraint_list_of_correct rmcs satisfies_real_mixed_constraints.simps by blast 
+  then have \<open>\<forall>L \<in> set Ms. holds_lit (of_rat_val v) \<beta> L\<close> using cons vals someV
+    by (metis Pair_inject holds_bool_lit_from_list option.inject option.map(2)) 
   then have \<open>holds_cnf (of_rat_val v) \<beta> N\<close> 
     using sat unfolding holds_cnf_def by blast 
   then have 2: \<open>sat_mf_struct (of_rat_val v) \<beta> F\<close>
@@ -498,9 +520,18 @@ proof -
 qed
 
 theorem decide_mia_formula_unsat: 
-  assumes "dpll_mia c Is f = None"
-  shows "\<nexists> v \<beta>. sat_mf v Is \<beta> f"
-  sorry
+  assumes "dpll_mia c Is F = None"
+  shows "\<nexists> v \<beta>. sat_mf v Is \<beta> F"
+proof -
+  define II where \<open>II = int_vars_of_list Is\<close>
+  define I where \<open>I = int_vars_set II\<close>
+  define N where \<open>N = (preprocess_formula I F)\<close>
+  obtain M N' where run: \<open>DPLL_T_partial (mia_\<T>_solver c II) ([], N) = (M, N')\<close>
+    using assms using prod.exhaust by blast 
+  define Ms where \<open>Ms = map lit_of M\<close>
+  show ?thesis
+    sorry
+qed
 
 (*Code gen test*)
 derive (eq) ceq literal

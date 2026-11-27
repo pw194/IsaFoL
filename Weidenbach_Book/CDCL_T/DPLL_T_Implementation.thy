@@ -6,6 +6,10 @@ section \<open>Simple Implementation of DPLL_T\<close>
 text \<open>I try to closely follow the development in \<^file>\<open>../CDCL/DPLL_W_Implementation.thy\<close> and to re-use
       as much as I can for this part\<close>
 
+(*TODO: Move*)
+lemma set_lit_of_is_lits_of_l[simp]: \<open>set (map lit_of Ms) = lits_of_l Ms\<close> 
+  by (simp add: lits_of_def)
+
 subsection \<open>The step function\<close>
 text 
 \<open>
@@ -151,10 +155,6 @@ next
   then show ?thesis
     using inv by auto 
 qed
-
-(*TODO: Move*)
-lemma set_lit_of_is_lits_of_l[simp]: \<open>set (map lit_of Ms) = lits_of_l Ms\<close> 
-  by (simp add: lits_of_def)
 
 thm backtrack_snd_empty_not_decided
 term lits_of_l
