@@ -148,7 +148,7 @@ proof
     using assms N_def[symmetric] unfolding dpll_mia_def by (metis (lifting) prod.exhaust)
   define Ms where \<open>Ms = map lit_of M\<close>
   have dis: \<open>\<not>(\<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms) \<or> (mia_\<T>_solver c Is Ms = None)\<close> \<comment> \<open>Either we have a propositional conflict or the theory rejects, used to split on later\<close>
-    using run assms N_def[symmetric] Ms_def unfolding dpll_mia_def 
+    using run assms N_def Ms_def unfolding dpll_mia_def 
     by (auto simp: Let_def split: if_splits prod.splits)
   assume \<open>\<exists>v \<beta>. sat_mf v Is \<beta> F\<close>
   then obtain v \<beta> where sat: \<open>sat_mf v Is \<beta> F\<close> by auto
@@ -174,8 +174,7 @@ proof
     assume \<open>\<not> (\<forall>C\<in>set N. \<exists>L\<in>set C. L \<in> set Ms)\<close>
     then show \<open>False\<close>
       using model Ms_def 
-      apply (simp add: true_annots_true_cls true_clss_def true_cls_def lits_of_def)
-      by blast 
+      by (simp add: true_annots_true_cls true_clss_def true_cls_def lits_of_def; blast)
   next
     have \<open>(set Ms) = lits_of_l M\<close>
       using Ms_def by (simp add: lits_of_def) 

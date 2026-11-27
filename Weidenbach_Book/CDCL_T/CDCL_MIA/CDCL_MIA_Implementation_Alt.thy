@@ -530,7 +530,45 @@ proof -
     using assms using prod.exhaust by blast 
   define Ms where \<open>Ms = map lit_of M\<close>
   show ?thesis
-    sorry
+  proof
+    assume \<open>\<exists>v \<beta>. sat_mf v Is \<beta> F\<close>
+    then obtain v \<beta> where sat: \<open>sat_mf v Is \<beta> F\<close>
+      by auto
+    then have clauses: \<open>holds_cnf v \<beta> N\<close>
+      unfolding sat_mf_def N_def
+      using II_def I_def by (metis int_vars_set_of_list preprocess_formula_correct satisfies_real_mixed_constraints.simps) 
+    have integral: \<open>wf_integral v (set Is)\<close>
+      using sat by (auto simp: sat_mf_def)
+    have sat_t: \<open>theory_mia.satisfiable\<^sub>\<T> (set Is) (set_mset (mset (map mset N)))\<close>
+      unfolding satisfiable\<^sub>\<T>_iff_model using integral clauses 
+        by (intro exI[of _ v] exI[of _ \<beta>]) (auto simp: holds_cnf_def)
+    have init: \<open>dpll\<^sub>W_all_inv (theory_mia.state\<^sub>\<T> (set Is) (toS [] N))\<close>
+      by (rule theory_mia.dpll\<^sub>W_all_inv_state\<^sub>\<T>_init)
+    have NN: \<open>N = N'\<close>
+      using I_def N_def final_trail(3) run by blast 
+    have dis: \<open>\<not>(\<forall>C \<in> set N. \<exists>L \<in> set C. L \<in> set Ms) \<or> ((mixed_cs_solver c (constraint_list_of Ms) II) = None)\<close>
+      using run assms II_def I_def N_def Ms_def unfolding dpll_mia_def by (auto simp: Let_def split: if_splits prod.splits)
+     have cons: \<open>consistent_interp (set Ms)\<close>
+      and atms: \<open>atm_of ` set Ms \<subseteq> atms_of_mm (mset (map mset N))\<close>
+       using final_trail[of N II F c M N'] run I_def N_def Ms_def by blast+
+    have model: \<open>(M \<Turnstile>asm mset (map mset N) \<and> theory_check_mia (lits_of_l M) (set Is))\<close>
+      using theory_problem.DPLL_T_partial_correct[OF theory_mia.theory_problem_axioms run, of M \<open>((mset (map mset N)))\<close> \<open>(set Is)\<close>]
+      using II_def I_def NN N_def sat_t by (metis int_vars_set_of_list mia_solver_correct) 
+    then have solver: \<open>mia_\<T>_solver c II Ms\<close>
+      using cons atms II_def I_def Ms_def N_def 
+      by (metis int_vars_set_of_list mia_solver_correct set_lit_of_is_lits_of_l theory_mia.theory_problem_axioms theory_problem.\<T>_solver_correctD) 
+    then have not_none: \<open>\<not> Option.is_none (mixed_cs_solver c (constraint_list_of Ms) II)\<close>
+      by (auto simp: mia_\<T>_solver_def)
+    show \<open>False\<close>
+      using dis proof (elim disjE)
+      assume \<open>\<not> (\<forall>C\<in>set N. \<exists>L\<in>set C. L \<in> set Ms)\<close>
+      then show \<open>False\<close> using model Ms_def 
+      by (simp add: true_annots_true_cls true_clss_def true_cls_def lits_of_def; blast)
+    next
+      assume \<open>mixed_cs_solver c (constraint_list_of Ms) II = None\<close>
+      then show \<open>False\<close> using not_none by auto
+    qed
+  qed
 qed
 
 (*Code gen test*)
