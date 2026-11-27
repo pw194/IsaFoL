@@ -584,7 +584,23 @@ derive (eq) ceq annotated_lit
 derive (no) ccompare annotated_lit
 derive (dlist) set_impl annotated_lit
 
-export_code dpll_mia in Haskell
+definition dpll_mia_default ::
+  \<open>nat list \<Rightarrow> nat mia_formula \<Rightarrow> ((nat \<Rightarrow> rat) \<times> (nat \<Rightarrow> bool)) option\<close> where
+  \<open>dpll_mia_default = dpll_mia Preprocess_Eqs\<close>
+
+definition rat_of_integers :: \<open>integer \<Rightarrow> integer \<Rightarrow> rat\<close> where
+  \<open>rat_of_integers a b = of_int (int_of_integer a) / of_int (int_of_integer b)\<close>
+
+definition integers_of_rat :: \<open>rat \<Rightarrow> integer \<times> integer\<close> where
+  \<open>integers_of_rat r = (case quotient_of r of (a, b) \<Rightarrow> (integer_of_int a, integer_of_int b))\<close>
+
+export_code
+  dpll_mia_default dpll_mia Preprocess_Eqs No_Preprocess
+  Conj Disj Lit BVar
+  LT GT LEQ GEQ EQ
+  lp_of_list lp_monom
+  nat_of_integer integer_of_nat rat_of_integers integers_of_rat
+  in Haskell module_name MIA_Solver_Alt
 
 
 definition F1 :: \<open>var mia_formula\<close> where

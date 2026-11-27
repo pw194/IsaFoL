@@ -13,3 +13,5 @@ session CDCL_MIA in "CDCL_MIA" = MIA_Tactic +
     CDCL_MIA_Implementation
     CDCL_MIA_Implementation_Alt
     LocaleTest
+  export_files (in "code/full_procedure") [3] "CDCL_MIA.CDCL_MIA_Implementation:code/**"
+  export_files (in "code/constraint_only") [3] "CDCL_MIA.CDCL_MIA_Implementation_Alt:code/**"
