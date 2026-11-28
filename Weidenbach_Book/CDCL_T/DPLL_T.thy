@@ -8,8 +8,8 @@ text
   This file offers a simple formalization of an abstract DPLL(\<T>) calculus. Note that we mean DPLL
   in the sense of naive backtracking and no clause learning. Unlike a lot of papers and SMT
   literature, we distinguish between DPLL as the naive backtracking version and CDCL as the modern
-  clause learning procedure. Moreover we always consider a given clause set, thus our atoms we
-  talk about are finite in nature and we do not currently support adding new atoms.
+  clause learning procedure. Moreover we always consider a given, fixed clause set. Thus our atoms 
+  we talk about are finite in nature and we do not currently support adding new atoms.
 \<close>
 
 subsection \<open>The theory problem locale\<close>
@@ -58,7 +58,7 @@ text
   I try a simulation. Further, the new backtrack rule does not talk about any clause, but
   simply allows to check the consistency of the current trail if at least one decision is present,
   and then backtracks in the case of an inconsistency. That is, my interpretation of DPLL(\<T>) is the 
-  standard DPLL_W with the addition of passing its (partial) trail to the \<T>-solver.
+  standard DPLL_W with the addition of passing its (partial) trail to the \<T>_solver.
 \<close>
 inductive dpll\<^sub>\<T> :: \<open>'p \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> 'v dpll\<^sub>W_state \<Rightarrow> bool\<close> for P where
   dpll\<^sub>W_step: \<open>dpll\<^sub>W S S' \<Longrightarrow>  dpll\<^sub>\<T> P S S'\<close> |
