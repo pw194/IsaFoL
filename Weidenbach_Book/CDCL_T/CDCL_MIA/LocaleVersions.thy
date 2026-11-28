@@ -1,4 +1,4 @@
-theory LocaleTest
+theory LocaleVersions
   imports CDCL_T.DPLL_T
 begin
 
@@ -13,7 +13,7 @@ text
 \<close>
 
 subsection \<open>Initial locale\<close>
-text \<open>This was the baseline and starting point from which I deviated a little by now\<close>
+text \<open>This is the baseline and starting point\<close>
 
 locale theory_problem_v1 =
   fixes
